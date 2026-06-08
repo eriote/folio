@@ -251,3 +251,80 @@ def search_books(query: str, limit: int = 50) -> list[dict]:
 
 def count_books() -> int:
     return get_conn().execute("SELECT COUNT(*) FROM books").fetchone()[0]
+
+
+# ── Profiles ──────────────────────────────────────────────────────────────────
+
+def get_or_create_default_profile() -> int:
+    conn = get_conn()
+    row = conn.execute("SELECT id FROM profiles WHERE name='Principal'").fetchone()
+    if row:
+        return row["id"]
+    cur = conn.execute("INSERT INTO profiles (name) VALUES ('Principal')")
+    conn.commit()
+    return cur.lastrowid
+
+
+# ── Reading log ───────────────────────────────────────────────────────────────
+
+def get_reading_status(book_id: int, profile_id: int | None = None) -> str | None:
+    """Returns 'reading', 'read', 'want_to_read' or None."""
+    if profile_id is None:
+        profile_id = get_or_create_default_profile()
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT status FROM reading_log WHERE book_id=? AND profile_id=? ORDER BY id DESC LIMIT 1",
+        (book_id, profile_id),
+    ).fetchone()
+    return row["status"] if row else None
+
+
+def set_reading_status(
+    book_id: int,
+    status: str,
+    title: str,
+    author: str,
+    profile_id: int | None = None,
+    date_started: str | None = None,
+    date_finished: str | None = None,
+) -> None:
+    if profile_id is None:
+        profile_id = get_or_create_default_profile()
+    conn = get_conn()
+    now = datetime.now().isoformat(timespec="seconds")
+    conn.execute(
+        """INSERT OR REPLACE INTO reading_log
+           (profile_id, book_id, title, author, status, date_started, date_finished, added_at)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (profile_id, book_id, title, author, status,
+         date_started or (now[:10] if status == "reading" else None),
+         date_finished or (now[:10] if status == "read" else None),
+         now),
+    )
+    conn.commit()
+
+
+def remove_from_reading_log(book_id: int, profile_id: int | None = None) -> None:
+    if profile_id is None:
+        profile_id = get_or_create_default_profile()
+    get_conn().execute(
+        "DELETE FROM reading_log WHERE book_id=? AND profile_id=?",
+        (book_id, profile_id),
+    )
+    get_conn().commit()
+
+
+def get_reading_list(status: str, profile_id: int | None = None) -> list[dict]:
+    if profile_id is None:
+        profile_id = get_or_create_default_profile()
+    rows = get_conn().execute("""
+        SELECT rl.id, rl.book_id, rl.title, rl.author,
+               rl.date_started, rl.date_finished, rl.added_at,
+               b.pages, s.name as series_name, b.series_num
+        FROM reading_log rl
+        LEFT JOIN books b ON b.id = rl.book_id
+        LEFT JOIN series s ON s.id = b.series_id
+        WHERE rl.profile_id=? AND rl.status=?
+        ORDER BY rl.added_at DESC
+    """, (profile_id, status)).fetchall()
+    return [dict(r) for r in rows]

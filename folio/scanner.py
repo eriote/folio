@@ -45,22 +45,16 @@ def _fix_author(name: str) -> str:
 
 def _extract_series(book: epub.EpubBook) -> tuple[str, str]:
     """Returns (series_name, series_num) from Calibre metadata if present."""
-    for meta in book.get_metadata("OPF", "series"):
-        name = meta[1].get("name") or meta[1].get("content") or ""
-        if name:
-            return name.strip(), ""
-    # Calibre stores series in <meta name="calibre:series">
+    series, num = "", ""
     for item in book.metadata.get("http://www.idpf.org/2007/opf", {}).get("meta", []):
-        if isinstance(item, tuple) and len(item) == 2:
-            attrs = item[1] if isinstance(item[1], dict) else {}
-            if attrs.get("name") == "calibre:series":
-                series = attrs.get("content", "").strip()
-            if attrs.get("name") == "calibre:series_index":
-                num = attrs.get("content", "").strip()
-    try:
-        return series, num
-    except UnboundLocalError:
-        return "", ""
+        if not isinstance(item, tuple) or len(item) < 2:
+            continue
+        attrs = item[1] if isinstance(item[1], dict) else {}
+        if attrs.get("name") == "calibre:series":
+            series = attrs.get("content", "").strip()
+        elif attrs.get("name") == "calibre:series_index":
+            num = attrs.get("content", "").strip()
+    return series, num
 
 
 def _estimate_pages(book: epub.EpubBook) -> int | None:

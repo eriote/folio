@@ -14,6 +14,7 @@ from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
 from folio.database import get_all_books, search_books, count_books
 from folio.paths import COVERS_DIR
 from folio.ui.book_detail import BookDetail
+from folio.ui.reading import ReadingPage
 
 CARD_W = 150
 CARD_H = 225
@@ -104,15 +105,27 @@ class MainWindow(Gtk.ApplicationWindow):
         self._header.pack_start(self._back_btn)
 
         self._search = Gtk.SearchEntry()
-        self._search.set_hexpand(True)
-        self._search.set_placeholder_text("Buscar libros, autores, series…")
+        self._search.set_placeholder_text("Buscar…")
         self._search.connect("search-changed", self._on_search_changed)
-        self._header.set_title_widget(self._search)
+        self._header.pack_start(self._search)
 
         self._count_lbl = Gtk.Label()
         self._count_lbl.add_css_class("dim-label")
         self._count_lbl.add_css_class("caption")
         self._header.pack_end(self._count_lbl)
+
+        # Tab switcher
+        switcher_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        switcher_box.add_css_class("linked")
+
+        self._tab_library = Gtk.ToggleButton(label="Biblioteca")
+        self._tab_reading = Gtk.ToggleButton(label="Lecturas")
+        self._tab_library.set_active(True)
+        self._tab_library.connect("toggled", self._on_main_tab, "library")
+        self._tab_reading.connect("toggled", self._on_main_tab, "reading")
+        switcher_box.append(self._tab_library)
+        switcher_box.append(self._tab_reading)
+        self._header.set_title_widget(switcher_box)
 
         # ── Stack: grid page / detail page ────────────────────────────────
         self._stack = Gtk.Stack()
@@ -147,6 +160,10 @@ class MainWindow(Gtk.ApplicationWindow):
         detail_scroll.set_child(self._detail)
         self._stack.add_named(detail_scroll, "detail")
 
+        # Reading page
+        self._reading_page = ReadingPage(on_open_book=self._open_book_detail)
+        self._stack.add_named(self._reading_page, "reading")
+
     def _load_books(self, query: str = ""):
         while self._flow.get_first_child():
             self._flow.remove(self._flow.get_first_child())
@@ -173,17 +190,40 @@ class MainWindow(Gtk.ApplicationWindow):
         card = child.get_child()
         if not isinstance(card, BookCard):
             return
-        self._detail.load_book(card.book["id"])
+        self._open_book_detail(card.book["id"])
+
+    def _open_book_detail(self, book_id: int):
+        self._detail.load_book(book_id)
         self._stack.set_visible_child_name("detail")
         self._back_btn.set_visible(True)
-        self._search.set_visible(False)
+        self._tab_library.set_visible(False)
+        self._tab_reading.set_visible(False)
         self._count_lbl.set_visible(False)
 
     def _on_back(self, _):
-        self._stack.set_visible_child_name("grid")
+        prev = "reading" if self._tab_reading.get_active() else "grid"
+        self._stack.set_visible_child_name(prev)
         self._back_btn.set_visible(False)
-        self._search.set_visible(True)
-        self._count_lbl.set_visible(True)
+        self._tab_library.set_visible(True)
+        self._tab_reading.set_visible(True)
+        self._count_lbl.set_visible(prev == "grid")
+        if prev == "reading":
+            self._reading_page.refresh()
+
+    def _on_main_tab(self, btn, key):
+        if not btn.get_active():
+            return
+        if key == "library":
+            self._tab_reading.set_active(False)
+            self._search.set_visible(True)
+            self._count_lbl.set_visible(True)
+            self._stack.set_visible_child_name("grid")
+        else:
+            self._tab_library.set_active(False)
+            self._search.set_visible(False)
+            self._count_lbl.set_visible(False)
+            self._stack.set_visible_child_name("reading")
+            self._reading_page.refresh()
 
     def _on_search_changed(self, entry):
         self._load_books(entry.get_text())
