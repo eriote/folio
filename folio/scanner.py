@@ -76,7 +76,7 @@ def _estimate_pages(book: epub.EpubBook) -> int | None:
 
 
 def _extract_cover(book: epub.EpubBook, book_id: int) -> None:
-    """Saves cover as COVERS_DIR/{book_id}.webp (150×225 px)."""
+    """Saves cover as COVERS_DIR/{book_id}.webp (300×450 px)."""
     image_bytes = None
 
     # Method 1: <meta name="cover">
@@ -105,7 +105,7 @@ def _extract_cover(book: epub.EpubBook, book_id: int) -> None:
 
     try:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        img = img.resize((150, 225), Image.LANCZOS)
+        img = img.resize((300, 450), Image.LANCZOS)
         img.save(COVERS_DIR / f"{book_id}.webp", "WEBP", quality=85)
     except Exception:
         pass

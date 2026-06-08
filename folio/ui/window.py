@@ -1,6 +1,6 @@
 """
 Main application window.
-Shows a searchable grid of book covers.
+Shows a searchable grid of book covers with navigation to book detail.
 """
 
 import threading
@@ -13,6 +13,7 @@ from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
 
 from folio.database import get_all_books, search_books, count_books
 from folio.paths import COVERS_DIR
+from folio.ui.book_detail import BookDetail
 
 CARD_W = 150
 CARD_H = 225
@@ -47,13 +48,12 @@ class BookCard(Gtk.Box):
         self._cover.set_size_request(CARD_W, CARD_H)
         self._cover.set_content_fit(Gtk.ContentFit.COVER)
         self._cover.set_can_shrink(False)
-        pb = _placeholder_pixbuf()
-        self._cover.set_paintable(Gdk.Texture.new_for_pixbuf(pb))
+        self._cover.set_paintable(Gdk.Texture.new_for_pixbuf(_placeholder_pixbuf()))
         self.append(self._cover)
 
         title_lbl = Gtk.Label(label=book["title"])
         title_lbl.set_wrap(True)
-        title_lbl.set_wrap_mode(2)  # WORD_CHAR
+        title_lbl.set_wrap_mode(2)
         title_lbl.set_max_width_chars(18)
         title_lbl.set_justify(Gtk.Justification.CENTER)
         title_lbl.add_css_class("caption")
@@ -64,7 +64,7 @@ class BookCard(Gtk.Box):
             author_lbl = Gtk.Label(label=author)
             author_lbl.add_css_class("caption")
             author_lbl.add_css_class("dim-label")
-            author_lbl.set_ellipsize(3)  # END
+            author_lbl.set_ellipsize(3)
             author_lbl.set_max_width_chars(18)
             self.append(author_lbl)
 
@@ -79,6 +79,10 @@ class BookCard(Gtk.Box):
     def _set_cover(self, pb):
         self._cover.set_paintable(Gdk.Texture.new_for_pixbuf(pb))
 
+    @property
+    def book(self):
+        return self._book
+
 
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
@@ -88,26 +92,38 @@ class MainWindow(Gtk.ApplicationWindow):
         self._load_books()
 
     def _build_ui(self):
-        # Header bar
-        header = Gtk.HeaderBar()
-        self.set_titlebar(header)
+        # ── Header bar ────────────────────────────────────────────────────
+        self._header = Gtk.HeaderBar()
+        self.set_titlebar(self._header)
+
+        self._back_btn = Gtk.Button()
+        self._back_btn.set_icon_name("go-previous-symbolic")
+        self._back_btn.set_tooltip_text("Volver")
+        self._back_btn.connect("clicked", self._on_back)
+        self._back_btn.set_visible(False)
+        self._header.pack_start(self._back_btn)
 
         self._search = Gtk.SearchEntry()
         self._search.set_hexpand(True)
         self._search.set_placeholder_text("Buscar libros, autores, series…")
         self._search.connect("search-changed", self._on_search_changed)
-        header.set_title_widget(self._search)
+        self._header.set_title_widget(self._search)
 
         self._count_lbl = Gtk.Label()
         self._count_lbl.add_css_class("dim-label")
         self._count_lbl.add_css_class("caption")
-        header.pack_end(self._count_lbl)
+        self._header.pack_end(self._count_lbl)
 
-        # Scrollable book grid
+        # ── Stack: grid page / detail page ────────────────────────────────
+        self._stack = Gtk.Stack()
+        self._stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self._stack.set_transition_duration(200)
+        self.set_child(self._stack)
+
+        # Grid page
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_vexpand(True)
-        self.set_child(scroll)
 
         self._flow = Gtk.FlowBox()
         self._flow.set_valign(Gtk.Align.START)
@@ -119,17 +135,24 @@ class MainWindow(Gtk.ApplicationWindow):
         self._flow.set_margin_top(16)
         self._flow.set_margin_start(16)
         self._flow.set_margin_end(16)
+        self._flow.connect("child-activated", self._on_card_activated)
         scroll.set_child(self._flow)
+        self._stack.add_named(scroll, "grid")
+
+        # Detail page (scrollable)
+        detail_scroll = Gtk.ScrolledWindow()
+        detail_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        detail_scroll.set_vexpand(True)
+        self._detail = BookDetail()
+        detail_scroll.set_child(self._detail)
+        self._stack.add_named(detail_scroll, "detail")
 
     def _load_books(self, query: str = ""):
         while self._flow.get_first_child():
             self._flow.remove(self._flow.get_first_child())
 
         def _bg():
-            if query.strip():
-                books = search_books(query)
-            else:
-                books = get_all_books()
+            books = search_books(query) if query.strip() else get_all_books()
             GLib.idle_add(self._populate, books, query)
 
         threading.Thread(target=_bg, daemon=True).start()
@@ -145,6 +168,22 @@ class MainWindow(Gtk.ApplicationWindow):
             card = BookCard(book)
             self._flow.append(card)
             card.load_cover_async()
+
+    def _on_card_activated(self, flowbox, child):
+        card = child.get_child()
+        if not isinstance(card, BookCard):
+            return
+        self._detail.load_book(card.book["id"])
+        self._stack.set_visible_child_name("detail")
+        self._back_btn.set_visible(True)
+        self._search.set_visible(False)
+        self._count_lbl.set_visible(False)
+
+    def _on_back(self, _):
+        self._stack.set_visible_child_name("grid")
+        self._back_btn.set_visible(False)
+        self._search.set_visible(True)
+        self._count_lbl.set_visible(True)
 
     def _on_search_changed(self, entry):
         self._load_books(entry.get_text())
