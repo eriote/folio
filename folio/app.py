@@ -1,8 +1,10 @@
 import gi
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gio
+from gi.repository import Gtk
 
-APP_ID = "io.github.eriote.Folio"
+from folio.database import count_books
+
+APP_ID  = "io.github.eriote.Folio"
 VERSION = "0.1.0"
 
 
@@ -13,6 +15,19 @@ def main():
 
 
 def _on_activate(app):
-    win = Gtk.ApplicationWindow(application=app, title="Folio")
-    win.set_default_size(1060, 660)
+    if count_books() == 0:
+        _show_welcome(app)
+    else:
+        _show_main(app)
+
+
+def _show_welcome(app):
+    from folio.ui.welcome import WelcomeWindow
+    win = WelcomeWindow(app, on_import_done=lambda: _show_main(app))
+    win.present()
+
+
+def _show_main(app):
+    from folio.ui.window import MainWindow
+    win = MainWindow(app)
     win.present()
