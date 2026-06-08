@@ -11,7 +11,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
 
-from folio.database import get_all_books, search_books, count_books
+from folio.database import get_all_books, search_books, count_books, get_books_by_author, get_books_by_series
 from folio.paths import COVERS_DIR
 from folio.ui.book_detail import BookDetail
 from folio.ui.reading import ReadingPage
@@ -156,13 +156,42 @@ class MainWindow(Gtk.ApplicationWindow):
         detail_scroll = Gtk.ScrolledWindow()
         detail_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         detail_scroll.set_vexpand(True)
-        self._detail = BookDetail()
+        self._detail = BookDetail(
+            on_open_author=self._open_author_page,
+            on_open_series=self._open_series_page,
+        )
         detail_scroll.set_child(self._detail)
         self._stack.add_named(detail_scroll, "detail")
 
         # Reading page
         self._reading_page = ReadingPage(on_open_book=self._open_book_detail)
         self._stack.add_named(self._reading_page, "reading")
+
+        # Collection page (author or series filtered grid)
+        coll_outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self._coll_title = Gtk.Label()
+        self._coll_title.add_css_class("title-4")
+        self._coll_title.set_margin_top(16)
+        self._coll_title.set_margin_bottom(4)
+        self._coll_title.set_margin_start(20)
+        self._coll_title.set_xalign(0)
+        coll_outer.append(self._coll_title)
+
+        coll_scroll = Gtk.ScrolledWindow()
+        coll_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        coll_scroll.set_vexpand(True)
+        self._coll_flow = Gtk.FlowBox()
+        self._coll_flow.set_valign(Gtk.Align.START)
+        self._coll_flow.set_max_children_per_line(12)
+        self._coll_flow.set_min_children_per_line(2)
+        self._coll_flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        self._coll_flow.set_margin_top(8)
+        self._coll_flow.set_margin_start(16)
+        self._coll_flow.set_margin_end(16)
+        self._coll_flow.connect("child-activated", self._on_coll_card_activated)
+        coll_scroll.set_child(self._coll_flow)
+        coll_outer.append(coll_scroll)
+        self._stack.add_named(coll_outer, "collection")
 
     def _load_books(self, query: str = ""):
         while self._flow.get_first_child():
@@ -193,6 +222,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self._open_book_detail(card.book["id"])
 
     def _open_book_detail(self, book_id: int):
+        self._detail_came_from = self._stack.get_visible_child_name()
         self._detail.load_book(book_id)
         self._stack.set_visible_child_name("detail")
         self._back_btn.set_visible(True)
@@ -201,14 +231,27 @@ class MainWindow(Gtk.ApplicationWindow):
         self._count_lbl.set_visible(False)
 
     def _on_back(self, _):
-        prev = "reading" if self._tab_reading.get_active() else "grid"
-        self._stack.set_visible_child_name(prev)
-        self._back_btn.set_visible(False)
-        self._tab_library.set_visible(True)
-        self._tab_reading.set_visible(True)
-        self._count_lbl.set_visible(prev == "grid")
-        if prev == "reading":
-            self._reading_page.refresh()
+        current = self._stack.get_visible_child_name()
+        if current == "detail":
+            # From detail: go back to collection if we came from there, else grid/reading
+            prev = getattr(self, "_detail_came_from", "grid")
+            self._stack.set_visible_child_name(prev)
+            if prev in ("grid", "reading"):
+                self._back_btn.set_visible(False)
+                self._tab_library.set_visible(True)
+                self._tab_reading.set_visible(True)
+                self._count_lbl.set_visible(prev == "grid")
+                if prev == "reading":
+                    self._reading_page.refresh()
+            # if prev == "collection", back btn stays visible
+        else:
+            # From collection: back to grid or reading
+            prev = "reading" if self._tab_reading.get_active() else "grid"
+            self._stack.set_visible_child_name(prev)
+            self._back_btn.set_visible(False)
+            self._tab_library.set_visible(True)
+            self._tab_reading.set_visible(True)
+            self._count_lbl.set_visible(prev == "grid")
 
     def _on_main_tab(self, btn, key):
         if not btn.get_active():
@@ -224,6 +267,44 @@ class MainWindow(Gtk.ApplicationWindow):
             self._count_lbl.set_visible(False)
             self._stack.set_visible_child_name("reading")
             self._reading_page.refresh()
+
+    def _open_author_page(self, author_name: str):
+        self._coll_title.set_label(f"Autor: {author_name}")
+        self._load_collection(get_books_by_author, author_name)
+
+    def _open_series_page(self, series_name: str):
+        self._coll_title.set_label(f"Serie: {series_name}")
+        self._load_collection(get_books_by_series, series_name)
+
+    def _load_collection(self, query_fn, arg: str):
+        while self._coll_flow.get_first_child():
+            self._coll_flow.remove(self._coll_flow.get_first_child())
+
+        def _bg():
+            books = query_fn(arg)
+            GLib.idle_add(self._populate_collection, books)
+
+        threading.Thread(target=_bg, daemon=True).start()
+        self._stack.set_visible_child_name("collection")
+        self._back_btn.set_visible(True)
+        self._tab_library.set_visible(False)
+        self._tab_reading.set_visible(False)
+        self._count_lbl.set_visible(False)
+
+    def _populate_collection(self, books: list):
+        for book in books:
+            card = BookCard(book)
+            self._coll_flow.append(card)
+            card.load_cover_async()
+        n = len(books)
+        self._coll_title.set_label(
+            self._coll_title.get_label() + f"  ·  {n} libro{'s' if n != 1 else ''}"
+        )
+
+    def _on_coll_card_activated(self, flowbox, child):
+        card = child.get_child()
+        if isinstance(card, BookCard):
+            self._open_book_detail(card.book["id"])
 
     def _on_search_changed(self, entry):
         self._load_books(entry.get_text())

@@ -41,13 +41,15 @@ def _placeholder() -> GdkPixbuf.Pixbuf:
 
 
 class BookDetail(Gtk.Box):
-    def __init__(self):
+    def __init__(self, on_open_author=None, on_open_series=None):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=32)
         self.set_margin_top(32)
         self.set_margin_bottom(32)
         self.set_margin_start(40)
         self.set_margin_end(40)
         self._book = None
+        self._on_open_author = on_open_author
+        self._on_open_series = on_open_series
         self._build_ui()
 
     def _build_ui(self):
@@ -72,17 +74,25 @@ class BookDetail(Gtk.Box):
         self._title_lbl.set_xalign(0)
         right.append(self._title_lbl)
 
+        self._author_btn = Gtk.Button()
+        self._author_btn.add_css_class("flat")
+        self._author_btn.set_halign(Gtk.Align.START)
+        self._author_btn.set_margin_top(2)
         self._author_lbl = Gtk.Label()
         self._author_lbl.add_css_class("heading")
-        self._author_lbl.set_xalign(0)
-        self._author_lbl.set_margin_top(2)
-        right.append(self._author_lbl)
+        self._author_btn.set_child(self._author_lbl)
+        self._author_btn.connect("clicked", self._on_author_clicked)
+        right.append(self._author_btn)
 
+        self._series_btn = Gtk.Button()
+        self._series_btn.add_css_class("flat")
+        self._series_btn.set_halign(Gtk.Align.START)
+        self._series_btn.set_visible(False)
         self._series_lbl = Gtk.Label()
         self._series_lbl.add_css_class("dim-label")
-        self._series_lbl.set_xalign(0)
-        self._series_lbl.set_visible(False)
-        right.append(self._series_lbl)
+        self._series_btn.set_child(self._series_lbl)
+        self._series_btn.connect("clicked", self._on_series_clicked)
+        right.append(self._series_btn)
 
         self._meta_lbl = Gtk.Label()
         self._meta_lbl.add_css_class("dim-label")
@@ -173,9 +183,9 @@ class BookDetail(Gtk.Box):
             if series_num:
                 label += f"  ·  vol. {series_num}"
             self._series_lbl.set_label(label)
-            self._series_lbl.set_visible(True)
+            self._series_btn.set_visible(True)
         else:
-            self._series_lbl.set_visible(False)
+            self._series_btn.set_visible(False)
 
         parts = []
         if book.get("year"):
@@ -229,3 +239,17 @@ class BookDetail(Gtk.Box):
             return
         remove_from_reading_log(self._book["id"])
         self._update_status_ui(None)
+
+    def _on_author_clicked(self, _):
+        if not self._book or not self._on_open_author:
+            return
+        authors = [a["name"] for a in self._book.get("authors", [])]
+        if authors:
+            self._on_open_author(authors[0])
+
+    def _on_series_clicked(self, _):
+        if not self._book or not self._on_open_series:
+            return
+        series = self._book.get("series_name") or ""
+        if series:
+            self._on_open_series(series)

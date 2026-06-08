@@ -253,6 +253,41 @@ def count_books() -> int:
     return get_conn().execute("SELECT COUNT(*) FROM books").fetchone()[0]
 
 
+def get_books_by_author(author_name: str) -> list[dict]:
+    norm = normalize(author_name)
+    rows = get_conn().execute("""
+        SELECT b.id, b.title, b.year, b.pages, b.series_num, b.added_at,
+               s.name as series_name,
+               GROUP_CONCAT(a2.name, ', ') as author
+        FROM authors a
+        JOIN book_authors ba ON ba.author_id = a.id
+        JOIN books b ON b.id = ba.book_id
+        LEFT JOIN series s ON s.id = b.series_id
+        LEFT JOIN book_authors ba2 ON ba2.book_id = b.id
+        LEFT JOIN authors a2 ON a2.id = ba2.author_id
+        WHERE a.name_norm = ?
+        GROUP BY b.id
+        ORDER BY s.name NULLS LAST, CAST(b.series_num AS REAL), b.year
+    """, (norm,)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_books_by_series(series_name: str) -> list[dict]:
+    rows = get_conn().execute("""
+        SELECT b.id, b.title, b.year, b.pages, b.series_num, b.added_at,
+               s.name as series_name,
+               GROUP_CONCAT(a.name, ', ') as author
+        FROM series s
+        JOIN books b ON b.series_id = s.id
+        LEFT JOIN book_authors ba ON ba.book_id = b.id
+        LEFT JOIN authors a ON a.id = ba.author_id
+        WHERE s.name = ?
+        GROUP BY b.id
+        ORDER BY CAST(b.series_num AS REAL), b.title
+    """, (series_name,)).fetchall()
+    return [dict(r) for r in rows]
+
+
 # ── Profiles ──────────────────────────────────────────────────────────────────
 
 def get_or_create_default_profile() -> int:
