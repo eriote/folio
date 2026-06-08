@@ -4,6 +4,8 @@ Main application window.
 
 import threading
 
+from pathlib import Path
+
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
@@ -14,7 +16,9 @@ from folio.database import (
     get_books_by_author, get_books_by_series,
 )
 from folio.paths import COVERS_DIR
+from folio.scanner import import_epub
 from folio.ui.book_detail import BookDetail
+from folio.ui.edit_books import EditPage
 from folio.ui.reading import ReadingPage
 
 CARD_W = 150
@@ -30,6 +34,7 @@ _SIDEBAR_CSS = """
 _SIDEBAR_TABS = [
     ("library",  "Biblioteca",  "view-grid-symbolic",         True),
     ("reading",  "Lecturas",    "bookmark-symbolic",          True),
+    ("edit",     "Editar",      "document-edit-symbolic",     True),
     ("discover", "Descubrir",   "starred-symbolic",           False),
     ("settings", "Ajustes",     "preferences-system-symbolic", False),
 ]
@@ -131,6 +136,12 @@ class MainWindow(Gtk.ApplicationWindow):
         self._back_btn.set_visible(False)
         header.pack_start(self._back_btn)
 
+        import_btn = Gtk.Button()
+        import_btn.set_icon_name("list-add-symbolic")
+        import_btn.set_tooltip_text("Añadir libros")
+        import_btn.connect("clicked", self._on_import_clicked)
+        header.pack_start(import_btn)
+
         self._search = Gtk.SearchEntry()
         self._search.set_placeholder_text("Buscar…")
         self._search.set_size_request(220, -1)
@@ -220,6 +231,10 @@ class MainWindow(Gtk.ApplicationWindow):
         self._reading_page = ReadingPage(on_open_book=self._open_book_detail)
         self._stack.add_named(self._reading_page, "reading")
 
+        # Edit
+        self._edit_page = EditPage(on_book_deleted=self._on_book_deleted)
+        self._stack.add_named(self._edit_page, "edit")
+
         # Collection (author / series)
         coll_outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self._coll_title = Gtk.Label()
@@ -261,6 +276,8 @@ class MainWindow(Gtk.ApplicationWindow):
                 self._count_lbl.set_visible(key == "library")
                 if key == "reading":
                     self._reading_page.refresh()
+                elif key == "edit":
+                    self._edit_page.refresh()
                 break
 
     def _on_stack_page_changed(self, stack, _param):
@@ -268,6 +285,9 @@ class MainWindow(Gtk.ApplicationWindow):
         root = "library" if name in ("grid", "detail", "collection") else name
         if root in self._sidebar_rows:
             self._sidebar_list.select_row(self._sidebar_rows[root])
+
+    def _on_book_deleted(self, book_id: int):
+        self._load_books()
 
     def _open_book_detail(self, book_id: int):
         self._detail_came_from = self._stack.get_visible_child_name()
@@ -350,3 +370,95 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _on_search_changed(self, entry):
         self._load_books(entry.get_text())
+
+    # ── Import ────────────────────────────────────────────────────────────
+
+    def _on_import_clicked(self, _):
+        dialog = Gtk.FileChooserDialog(
+            title="Seleccionar archivos EPUB",
+            transient_for=self,
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Añadir", Gtk.ResponseType.ACCEPT)
+        dialog.set_select_multiple(True)
+        f = Gtk.FileFilter()
+        f.set_name("Archivos EPUB (*.epub)")
+        f.add_pattern("*.epub")
+        dialog.add_filter(f)
+        dialog.connect("response", self._on_import_response)
+        dialog.show()
+
+    def _on_import_response(self, dialog, response):
+        if response != Gtk.ResponseType.ACCEPT:
+            dialog.destroy()
+            return
+        files = dialog.get_files()
+        paths = [Path(f.get_path()) for f in files]
+        dialog.destroy()
+        if paths:
+            self._run_import(paths)
+
+    def _run_import(self, paths: list):
+        progress = _ImportProgressDialog(self, paths)
+        progress.connect("response", lambda d, _: (d.destroy(), self._load_books()))
+        progress.show()
+
+
+class _ImportProgressDialog(Gtk.Dialog):
+    def __init__(self, parent, paths: list):
+        super().__init__(title="Añadiendo libros", transient_for=parent, modal=True)
+        self.set_default_size(420, 130)
+        self.set_resizable(False)
+        self._paths = paths
+        self._imported = 0
+        self._skipped = 0
+
+        box = self.get_content_area()
+        box.set_spacing(10)
+        box.set_margin_top(20)
+        box.set_margin_start(20)
+        box.set_margin_end(20)
+        box.set_margin_bottom(16)
+
+        self._lbl = Gtk.Label(label="Preparando…")
+        self._lbl.set_xalign(0)
+        self._lbl.set_ellipsize(3)
+        box.append(self._lbl)
+
+        self._bar = Gtk.ProgressBar()
+        self._bar.set_pulse_step(0.1)
+        box.append(self._bar)
+
+        self._close_btn = self.add_button("Cerrar", Gtk.ResponseType.OK)
+        self._close_btn.set_sensitive(False)
+
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def _run(self):
+        total = len(self._paths)
+        for i, path in enumerate(self._paths):
+            GLib.idle_add(self._update, i, total, path.stem)
+            try:
+                result = import_epub(path)
+                if result:
+                    self._imported += 1
+                else:
+                    self._skipped += 1
+            except Exception:
+                self._skipped += 1
+        GLib.idle_add(self._done, total)
+
+    def _update(self, i, total, name):
+        self._lbl.set_label(f"Importando: {name}")
+        self._bar.set_fraction((i + 1) / total)
+
+    def _done(self, total):
+        n = self._imported
+        s = self._skipped
+        msg = f"{n} libro{'s' if n != 1 else ''} añadido{'s' if n != 1 else ''}"
+        if s:
+            msg += f"  ·  {s} omitido{'s' if s != 1 else ''} (ya existían)"
+        self._lbl.set_label(msg)
+        self._bar.set_fraction(1.0)
+        self._close_btn.set_sensitive(True)

@@ -178,6 +178,45 @@ def _dest_path(authors: list[str], title: str, original: Path) -> Path:
 
 # ── Scanner ───────────────────────────────────────────────────────────────────
 
+def import_epub(epub_path: Path) -> int | None:
+    """
+    Import a single epub into the library.
+    Returns the new book_id, or None if the file was already in the library.
+    """
+    ensure_dirs()
+    conn = get_conn()
+    meta = read_epub_metadata(epub_path)
+    title = meta["title"]
+    rel = str(_dest_path(meta["authors"], title, epub_path))
+
+    existing = {row[0] for row in conn.execute("SELECT epub_path FROM books").fetchall()}
+    if rel in existing:
+        return None
+
+    dest = EPUBS_DIR / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(epub_path, dest)
+
+    book_id = add_book(
+        title=title,
+        authors=meta["authors"],
+        epub_path=rel,
+        year=meta["year"],
+        pages=meta["pages"],
+        description=meta["description"],
+        series=meta["series"],
+        series_num=meta["series_num"],
+    )
+
+    try:
+        book = epub.read_epub(str(epub_path), options={"ignore_ncx": True})
+        _extract_cover(book, book_id)
+    except Exception:
+        pass
+
+    return book_id
+
+
 def find_epubs(root: Path) -> list[Path]:
     return sorted(
         p for p in root.rglob("*") if p.suffix.lower() in EPUB_EXTENSIONS

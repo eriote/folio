@@ -171,6 +171,39 @@ def add_book(
     return book_id
 
 
+def _refresh_fts(conn, book_id: int) -> None:
+    row = conn.execute(
+        "SELECT b.title, s.name FROM books b LEFT JOIN series s ON s.id=b.series_id WHERE b.id=?",
+        (book_id,),
+    ).fetchone()
+    if not row:
+        return
+    author_str = ", ".join(
+        r["name"] for r in conn.execute(
+            "SELECT a.name FROM authors a JOIN book_authors ba ON ba.author_id=a.id "
+            "WHERE ba.book_id=? ORDER BY ba.sort_order", (book_id,)
+        ).fetchall()
+    )
+    conn.execute("DELETE FROM books_fts WHERE rowid=?", (book_id,))
+    conn.execute(
+        "INSERT INTO books_fts (rowid, title, author, series) VALUES (?,?,?,?)",
+        (book_id, row[0], author_str, row[1] or ""),
+    )
+
+
+def set_book_authors(book_id: int, author_names: list[str]) -> None:
+    conn = get_conn()
+    conn.execute("DELETE FROM book_authors WHERE book_id=?", (book_id,))
+    for i, name in enumerate(author_names):
+        aid = get_or_create_author(name.strip())
+        conn.execute(
+            "INSERT OR IGNORE INTO book_authors (book_id, author_id, sort_order) VALUES (?,?,?)",
+            (book_id, aid, i),
+        )
+    _refresh_fts(conn, book_id)
+    conn.commit()
+
+
 def update_book(book_id: int, **fields) -> None:
     conn = get_conn()
     allowed = {"title", "year", "pages", "description", "series_num"}
@@ -187,6 +220,7 @@ def update_book(book_id: int, **fields) -> None:
 
     cols = ", ".join(f"{k}=?" for k in updates)
     conn.execute(f"UPDATE books SET {cols} WHERE id=?", (*updates.values(), book_id))
+    _refresh_fts(conn, book_id)
     conn.commit()
 
 
