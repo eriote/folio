@@ -86,7 +86,7 @@ class EditPage(Gtk.Box):
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
         self._search = Gtk.SearchEntry()
-        self._search.set_placeholder_text("Filtrar libros…")
+        self._search.set_placeholder_text(_("Filter books…"))
         self._search.set_margin_top(12)
         self._search.set_margin_start(8)
         self._search.set_margin_end(8)
@@ -117,7 +117,7 @@ class EditPage(Gtk.Box):
         # Empty state
         self._empty_box = Gtk.Box()
         self._empty_box.set_vexpand(True)
-        empty_lbl = Gtk.Label(label="Selecciona un libro de la lista")
+        empty_lbl = Gtk.Label(label=_("Select a book from the list"))
         empty_lbl.add_css_class("dim-label")
         empty_lbl.set_valign(Gtk.Align.CENTER)
         empty_lbl.set_vexpand(True)
@@ -155,11 +155,11 @@ class EditPage(Gtk.Box):
         self._cover_status.set_xalign(0.5)
         cover_col.append(self._cover_status)
 
-        pick_btn = Gtk.Button(label="Elegir imagen…")
+        pick_btn = Gtk.Button(label=_("Choose image…"))
         pick_btn.connect("clicked", self._on_pick_cover)
         cover_col.append(pick_btn)
 
-        fetch_btn = Gtk.Button(label="Buscar en internet")
+        fetch_btn = Gtk.Button(label=_("Search online"))
         fetch_btn.connect("clicked", self._on_fetch_cover)
         cover_col.append(fetch_btn)
 
@@ -180,40 +180,40 @@ class EditPage(Gtk.Box):
             l.add_css_class("dim-label")
             return l
 
-        grid.attach(_lbl("Título"), 0, 0, 1, 1)
+        grid.attach(_lbl(_("Title")), 0, 0, 1, 1)
         self._e_title = Gtk.Entry()
         self._e_title.set_hexpand(True)
         grid.attach(self._e_title, 1, 0, 3, 1)
 
-        grid.attach(_lbl("Autores"), 0, 1, 1, 1)
+        grid.attach(_lbl(_("Authors")), 0, 1, 1, 1)
         self._e_authors = Gtk.Entry()
-        self._e_authors.set_placeholder_text("separados por coma")
+        self._e_authors.set_placeholder_text(_("separated by comma"))
         self._e_authors.set_hexpand(True)
         grid.attach(self._e_authors, 1, 1, 3, 1)
 
-        grid.attach(_lbl("Año"), 0, 2, 1, 1)
+        grid.attach(_lbl(_("Year")), 0, 2, 1, 1)
         self._e_year = Gtk.Entry()
         self._e_year.set_max_length(4)
         self._e_year.set_width_chars(6)
         grid.attach(self._e_year, 1, 2, 1, 1)
 
-        grid.attach(_lbl("Páginas"), 2, 2, 1, 1)
+        grid.attach(_lbl(_("Pages")), 2, 2, 1, 1)
         self._e_pages = Gtk.Entry()
         self._e_pages.set_max_length(6)
         self._e_pages.set_width_chars(7)
         grid.attach(self._e_pages, 3, 2, 1, 1)
 
-        grid.attach(_lbl("Serie"), 0, 3, 1, 1)
+        grid.attach(_lbl(_("Series")), 0, 3, 1, 1)
         self._e_series = Gtk.Entry()
         self._e_series.set_hexpand(True)
         grid.attach(self._e_series, 1, 3, 2, 1)
 
-        grid.attach(_lbl("Vol."), 3, 3, 1, 1)
+        grid.attach(_lbl(_("Vol.")), 3, 3, 1, 1)
         self._e_series_num = Gtk.Entry()
         self._e_series_num.set_width_chars(5)
         grid.attach(self._e_series_num, 3, 3, 1, 1)
 
-        grid.attach(_lbl("Descripción"), 0, 4, 1, 1)
+        grid.attach(_lbl(_("Description")), 0, 4, 1, 1)
         desc_scroll = Gtk.ScrolledWindow()
         desc_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         desc_scroll.set_min_content_height(120)
@@ -232,13 +232,13 @@ class EditPage(Gtk.Box):
         btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         btn_row.set_margin_top(16)
 
-        self._save_btn = Gtk.Button(label="Guardar cambios")
+        self._save_btn = Gtk.Button(label=_("Save changes"))
         self._save_btn.add_css_class("suggested-action")
         self._save_btn.add_css_class("pill")
         self._save_btn.connect("clicked", self._on_save)
         btn_row.append(self._save_btn)
 
-        self._del_btn = Gtk.Button(label="Eliminar libro")
+        self._del_btn = Gtk.Button(label=_("Delete book"))
         self._del_btn.add_css_class("destructive-action")
         self._del_btn.add_css_class("pill")
         self._del_btn.connect("clicked", self._on_delete)
@@ -342,10 +342,10 @@ class EditPage(Gtk.Box):
 
         if pb:
             self._cover_pic.set_paintable(Gdk.Texture.new_for_pixbuf(pb))
-            self._cover_status.set_label("Portada actual")
+            self._cover_status.set_label(_("Current cover"))
         else:
             self._cover_pic.set_paintable(None)
-            self._cover_status.set_label("Sin portada")
+            self._cover_status.set_label(_("No cover"))
 
         self._e_title.set_text(book.get("title") or "")
         authors = ", ".join(a["name"] for a in book.get("authors", []))
@@ -362,14 +362,14 @@ class EditPage(Gtk.Box):
         if not self._current_id:
             return
         dialog = Gtk.FileChooserDialog(
-            title="Seleccionar imagen de portada",
+            title=_("Select cover image"),
             transient_for=self.get_root(),
             action=Gtk.FileChooserAction.OPEN,
         )
-        dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-        dialog.add_button("Usar esta imagen", Gtk.ResponseType.ACCEPT)
+        dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        dialog.add_button(_("Use this image"), Gtk.ResponseType.ACCEPT)
         f = Gtk.FileFilter()
-        f.set_name("Imágenes (jpg, png, webp)")
+        f.set_name(_("Images (jpg, png, webp)"))
         for p in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
             f.add_pattern(p)
         dialog.add_filter(f)
@@ -386,9 +386,9 @@ class EditPage(Gtk.Box):
                 if pb:
                     self._edit_cover_bytes = data
                     self._cover_pic.set_paintable(Gdk.Texture.new_for_pixbuf(pb))
-                    self._cover_status.set_label("Nueva portada (sin guardar)")
+                    self._cover_status.set_label(_("New cover (unsaved)"))
             except Exception:
-                self._cover_status.set_label("Error al leer la imagen")
+                self._cover_status.set_label(_("Error reading image"))
         else:
             dialog.destroy()
 
@@ -397,7 +397,7 @@ class EditPage(Gtk.Box):
             return
         title = self._e_title.get_text().strip()
         author = self._e_authors.get_text().strip()
-        self._cover_status.set_label("Buscando en internet…")
+        self._cover_status.set_label(_("Searching online…"))
 
         def _bg():
             data = _fetch_cover_online(title, author)
@@ -407,9 +407,9 @@ class EditPage(Gtk.Box):
                     if pb:
                         self._edit_cover_bytes = data
                         self._cover_pic.set_paintable(Gdk.Texture.new_for_pixbuf(pb))
-                        self._cover_status.set_label("Portada descargada (sin guardar)")
+                        self._cover_status.set_label(_("Cover downloaded (unsaved)"))
                         return
-                self._cover_status.set_label("No encontrada en internet")
+                self._cover_status.set_label(_("Not found online"))
             GLib.idle_add(_done)
         threading.Thread(target=_bg, daemon=True).start()
 
@@ -421,10 +421,10 @@ class EditPage(Gtk.Box):
 
         title = self._e_title.get_text().strip()
         if not title:
-            self._status_lbl.set_label("El título no puede estar vacío.")
+            self._status_lbl.set_label(_("Title cannot be empty."))
             return
 
-        authors = [a.strip() for a in self._e_authors.get_text().split(",") if a.strip()] or ["Desconocido"]
+        authors = [a.strip() for a in self._e_authors.get_text().split(",") if a.strip()] or [_("Unknown")]
         year_txt = self._e_year.get_text().strip()
         pages_txt = self._e_pages.get_text().strip()
         year = int(year_txt) if year_txt.isdigit() else None
@@ -453,9 +453,9 @@ class EditPage(Gtk.Box):
 
     def _on_save_done(self, title, authors):
         self._edit_cover_bytes = None
-        if "sin guardar" in self._cover_status.get_label():
-            self._cover_status.set_label("Portada actual")
-        self._status_lbl.set_label("Guardado.")
+        if _("unsaved") in self._cover_status.get_label():
+            self._cover_status.set_label(_("Current cover"))
+        self._status_lbl.set_label(_("Saved."))
 
         row = self._book_list.get_selected_row()
         if row:
@@ -479,11 +479,11 @@ class EditPage(Gtk.Box):
             modal=True,
             message_type=Gtk.MessageType.WARNING,
             buttons=Gtk.ButtonsType.NONE,
-            text="¿Eliminar este libro?",
-            secondary_text="Se eliminará de la biblioteca. El archivo epub no se borrará.",
+            text=_("Delete this book?"),
+            secondary_text=_("It will be removed from the library. The epub file will not be deleted."),
         )
-        dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-        btn = dialog.add_button("Eliminar", Gtk.ResponseType.ACCEPT)
+        dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        btn = dialog.add_button(_("Delete"), Gtk.ResponseType.ACCEPT)
         btn.add_css_class("destructive-action")
         dialog.connect("response", self._on_delete_confirmed)
         dialog.show()

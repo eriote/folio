@@ -1,3 +1,6 @@
+from folio.i18n import setup as _setup_i18n
+_setup_i18n()
+
 import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk

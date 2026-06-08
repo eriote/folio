@@ -246,40 +246,45 @@ def get_book(book_id: int) -> dict | None:
     return result
 
 
-def get_all_books(limit: int = 0, offset: int = 0) -> list[dict]:
+_SORT_ORDER = {
+    "recientes": "b.added_at DESC",
+    "titulo":    "b.title_norm ASC",
+    "autor":     "MIN(a.name_norm) NULLS LAST, b.title_norm ASC",
+    "serie":     "s.name NULLS LAST, CAST(b.series_num AS REAL), b.title_norm ASC",
+    "anyo":      "b.year DESC NULLS LAST, b.title_norm ASC",
+}
+
+_BOOKS_SELECT = """
+    SELECT b.id, b.title, b.year, b.pages, b.series_num, b.added_at,
+           s.name as series_name,
+           GROUP_CONCAT(a.name, ', ') as author
+    FROM books b
+    LEFT JOIN series s ON s.id = b.series_id
+    LEFT JOIN book_authors ba ON ba.book_id = b.id
+    LEFT JOIN authors a ON a.id = ba.author_id
+"""
+
+
+def get_all_books(limit: int = 0, offset: int = 0, sort: str = "recientes") -> list[dict]:
     conn = get_conn()
-    sql = """
-        SELECT b.id, b.title, b.year, b.pages, b.series_num, b.added_at,
-               s.name as series_name,
-               GROUP_CONCAT(a.name, ', ') as author
-        FROM books b
-        LEFT JOIN series s ON s.id = b.series_id
-        LEFT JOIN book_authors ba ON ba.book_id = b.id
-        LEFT JOIN authors a ON a.id = ba.author_id
-        GROUP BY b.id
-        ORDER BY b.added_at DESC
-    """
+    order = _SORT_ORDER.get(sort, _SORT_ORDER["recientes"])
+    sql = _BOOKS_SELECT + f"GROUP BY b.id ORDER BY {order}"
     if limit:
         sql += f" LIMIT {limit} OFFSET {offset}"
     return [dict(r) for r in conn.execute(sql).fetchall()]
 
 
-def search_books(query: str, limit: int = 50) -> list[dict]:
+def search_books(query: str, limit: int = 200, sort: str = "recientes") -> list[dict]:
     conn = get_conn()
-    # FTS search
-    rows = conn.execute("""
-        SELECT b.id, b.title, b.year, b.pages, b.series_num, b.added_at,
-               s.name as series_name,
-               GROUP_CONCAT(a.name, ', ') as author
-        FROM books_fts f
-        JOIN books b ON b.id = f.rowid
-        LEFT JOIN series s ON s.id = b.series_id
-        LEFT JOIN book_authors ba ON ba.book_id = b.id
-        LEFT JOIN authors a ON a.id = ba.author_id
+    order = _SORT_ORDER.get(sort, _SORT_ORDER["recientes"])
+    rows = conn.execute(
+        _BOOKS_SELECT + """
+        JOIN books_fts f ON f.rowid = b.id
         WHERE books_fts MATCH ?
         GROUP BY b.id
-        LIMIT ?
-    """, (query + "*", limit)).fetchall()
+        ORDER BY """ + order + " LIMIT ?",
+        (query + "*", limit),
+    ).fetchall()
     return [dict(r) for r in rows]
 
 

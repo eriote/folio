@@ -3,7 +3,6 @@ Book detail page — shown when the user clicks a card in the grid.
 """
 
 import threading
-from datetime import date
 
 import gi
 gi.require_version("Gtk", "4.0")
@@ -18,9 +17,9 @@ from folio.paths import COVERS_DIR
 COVER_W, COVER_H = 300, 450
 
 STATUS_LABELS = {
-    "reading":       "Leyendo",
-    "read":          "Leído ✓",
-    "want_to_read":  "En lista",
+    "reading":      "Reading",
+    "read":         "Read ✓",
+    "want_to_read": "Want to read",
 }
 
 
@@ -43,17 +42,14 @@ def _placeholder() -> GdkPixbuf.Pixbuf:
 class BookDetail(Gtk.Box):
     def __init__(self, on_open_author=None, on_open_series=None):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=32)
-        self.set_margin_top(32)
-        self.set_margin_bottom(32)
-        self.set_margin_start(40)
-        self.set_margin_end(40)
+        self.set_margin_top(32); self.set_margin_bottom(32)
+        self.set_margin_start(40); self.set_margin_end(40)
         self._book = None
         self._on_open_author = on_open_author
         self._on_open_series = on_open_series
         self._build_ui()
 
     def _build_ui(self):
-        # ── Left: cover ───────────────────────────────────────────────────
         self._cover = Gtk.Picture()
         self._cover.set_size_request(COVER_W, COVER_H)
         self._cover.set_content_fit(Gtk.ContentFit.COVER)
@@ -62,7 +58,6 @@ class BookDetail(Gtk.Box):
         self._cover.set_paintable(Gdk.Texture.new_for_pixbuf(_placeholder()))
         self.append(self._cover)
 
-        # ── Right: metadata + description ─────────────────────────────────
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         right.set_hexpand(True)
         right.set_valign(Gtk.Align.START)
@@ -102,22 +97,21 @@ class BookDetail(Gtk.Box):
         self._meta_lbl.set_margin_bottom(8)
         right.append(self._meta_lbl)
 
-        # Action buttons
         btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         btn_row.set_margin_bottom(8)
 
-        self._read_btn = Gtk.Button(label="▶ Empezar a leer")
+        self._read_btn = Gtk.Button(label=_("▶ Start reading"))
         self._read_btn.add_css_class("suggested-action")
         self._read_btn.add_css_class("pill")
         self._read_btn.connect("clicked", self._on_read_clicked)
         btn_row.append(self._read_btn)
 
-        self._want_btn = Gtk.Button(label="+ Por leer")
+        self._want_btn = Gtk.Button(label=_("+ Want to read"))
         self._want_btn.add_css_class("pill")
         self._want_btn.connect("clicked", self._on_want_clicked)
         btn_row.append(self._want_btn)
 
-        self._remove_btn = Gtk.Button(label="✕ Quitar de lista")
+        self._remove_btn = Gtk.Button(label=_("✕ Remove"))
         self._remove_btn.add_css_class("pill")
         self._remove_btn.add_css_class("destructive-action")
         self._remove_btn.set_visible(False)
@@ -134,13 +128,11 @@ class BookDetail(Gtk.Box):
         self._status_lbl.set_margin_bottom(8)
         right.append(self._status_lbl)
 
-        # Description
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_vexpand(True)
         scroll.set_max_content_height(300)
         scroll.set_propagate_natural_height(True)
-
         self._desc_lbl = Gtk.Label()
         self._desc_lbl.set_wrap(True)
         self._desc_lbl.set_xalign(0)
@@ -148,8 +140,6 @@ class BookDetail(Gtk.Box):
         self._desc_lbl.set_margin_top(4)
         scroll.set_child(self._desc_lbl)
         right.append(scroll)
-
-    # ── Public API ────────────────────────────────────────────────────────
 
     def load_book(self, book_id: int):
         self._cover.set_paintable(Gdk.Texture.new_for_pixbuf(_placeholder()))
@@ -162,8 +152,6 @@ class BookDetail(Gtk.Box):
             GLib.idle_add(self._populate, book, pb, status)
 
         threading.Thread(target=_bg, daemon=True).start()
-
-    # ── Private ───────────────────────────────────────────────────────────
 
     def _populate(self, book: dict, pb, status: str | None):
         self._book = book
@@ -179,9 +167,9 @@ class BookDetail(Gtk.Box):
         series = book.get("series_name") or ""
         series_num = book.get("series_num") or ""
         if series:
-            label = f"Serie: {series}"
+            label = _("Series: {series}").format(series=series)
             if series_num:
-                label += f"  ·  vol. {series_num}"
+                label += "  ·  " + _("vol. {num}").format(num=series_num)
             self._series_lbl.set_label(label)
             self._series_btn.set_visible(True)
         else:
@@ -191,16 +179,17 @@ class BookDetail(Gtk.Box):
         if book.get("year"):
             parts.append(str(book["year"]))
         if book.get("pages"):
-            parts.append(f"{book['pages']} páginas")
+            parts.append(_("{pages} pages").format(pages=book["pages"]))
         self._meta_lbl.set_label("  ·  ".join(parts))
 
-        self._desc_lbl.set_label(book.get("description") or "Sin descripción.")
+        self._desc_lbl.set_label(book.get("description") or _("No description."))
 
         self._update_status_ui(status)
 
     def _update_status_ui(self, status: str | None):
         if status:
-            self._status_lbl.set_label(f"Estado: {STATUS_LABELS.get(status, status)}")
+            label = _(STATUS_LABELS.get(status, status))
+            self._status_lbl.set_label(_("Status: {status}").format(status=label))
             self._status_lbl.set_visible(True)
             self._remove_btn.set_visible(True)
             self._read_btn.set_sensitive(status != "reading")
@@ -219,19 +208,15 @@ class BookDetail(Gtk.Box):
     def _on_read_clicked(self, _):
         if not self._book:
             return
-        set_reading_status(
-            self._book["id"], "reading",
-            self._book["title"], self._author_str(),
-        )
+        set_reading_status(self._book["id"], "reading",
+                           self._book["title"], self._author_str())
         self._update_status_ui("reading")
 
     def _on_want_clicked(self, _):
         if not self._book:
             return
-        set_reading_status(
-            self._book["id"], "want_to_read",
-            self._book["title"], self._author_str(),
-        )
+        set_reading_status(self._book["id"], "want_to_read",
+                           self._book["title"], self._author_str())
         self._update_status_ui("want_to_read")
 
     def _on_remove_clicked(self, _):

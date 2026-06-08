@@ -1,5 +1,5 @@
 """
-Reading page — Leyendo / Por leer / Leídos tabs.
+Reading page — Reading / Want to Read / Read tabs.
 """
 
 import threading
@@ -37,7 +37,6 @@ class ReadingPage(Gtk.Box):
         self.refresh()
 
     def _build_ui(self):
-        # Tab bar
         tab_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         tab_bar.add_css_class("linked")
         tab_bar.set_halign(Gtk.Align.CENTER)
@@ -46,13 +45,16 @@ class ReadingPage(Gtk.Box):
         self.append(tab_bar)
 
         self._tabs = {}
-        for key, label in [("reading", "Leyendo"), ("want_to_read", "Por leer"), ("read", "Leídos")]:
+        for key, label in [
+            ("reading",      _("Reading")),
+            ("want_to_read", _("Want to read")),
+            ("read",         _("Read")),
+        ]:
             btn = Gtk.ToggleButton(label=label)
             btn.connect("toggled", self._on_tab_toggled, key)
             tab_bar.append(btn)
             self._tabs[key] = btn
 
-        # Stack
         self._stack = Gtk.Stack()
         self._stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
         self._stack.set_transition_duration(150)
@@ -65,15 +67,12 @@ class ReadingPage(Gtk.Box):
             lb = Gtk.ListBox()
             lb.add_css_class("boxed-list")
             lb.set_selection_mode(Gtk.SelectionMode.NONE)
-            lb.set_margin_top(8)
-            lb.set_margin_bottom(16)
-            lb.set_margin_start(24)
-            lb.set_margin_end(24)
+            lb.set_margin_top(8); lb.set_margin_bottom(16)
+            lb.set_margin_start(24); lb.set_margin_end(24)
             scroll.set_child(lb)
             self._stack.add_named(scroll, key)
             setattr(self, f"_lb_{key}", lb)
 
-        # Activate first tab
         self._tabs["reading"].set_active(True)
         self._active_tab = "reading"
 
@@ -109,14 +108,12 @@ class ReadingPage(Gtk.Box):
             if not entries:
                 row = Gtk.ListBoxRow()
                 row.set_activatable(False)
-                lbl = Gtk.Label(label="Nada aquí todavía.")
+                lbl = Gtk.Label(label=_("Nothing here yet."))
                 lbl.add_css_class("dim-label")
-                lbl.set_margin_top(24)
-                lbl.set_margin_bottom(24)
+                lbl.set_margin_top(24); lbl.set_margin_bottom(24)
                 row.set_child(lbl)
                 lb.append(row)
                 continue
-
             for entry in entries:
                 row = self._make_row(entry, status, covers.get(entry.get("book_id")))
                 lb.append(row)
@@ -126,12 +123,9 @@ class ReadingPage(Gtk.Box):
         row.set_activatable(bool(entry.get("book_id")))
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        box.set_margin_top(8)
-        box.set_margin_bottom(8)
-        box.set_margin_start(12)
-        box.set_margin_end(8)
+        box.set_margin_top(8); box.set_margin_bottom(8)
+        box.set_margin_start(12); box.set_margin_end(8)
 
-        # Thumbnail
         thumb = Gtk.Picture()
         thumb.set_size_request(THUMB_W, THUMB_H)
         thumb.set_content_fit(Gtk.ContentFit.COVER)
@@ -140,43 +134,38 @@ class ReadingPage(Gtk.Box):
             thumb.set_paintable(Gdk.Texture.new_for_pixbuf(pb))
         box.append(thumb)
 
-        # Text
         txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         txt.set_hexpand(True)
         txt.set_valign(Gtk.Align.CENTER)
 
         title_lbl = Gtk.Label(label=entry["title"])
-        title_lbl.set_xalign(0)
-        title_lbl.set_ellipsize(3)
+        title_lbl.set_xalign(0); title_lbl.set_ellipsize(3)
         txt.append(title_lbl)
 
         author_lbl = Gtk.Label(label=entry["author"])
-        author_lbl.add_css_class("dim-label")
-        author_lbl.add_css_class("caption")
-        author_lbl.set_xalign(0)
-        author_lbl.set_ellipsize(3)
+        author_lbl.add_css_class("dim-label"); author_lbl.add_css_class("caption")
+        author_lbl.set_xalign(0); author_lbl.set_ellipsize(3)
         txt.append(author_lbl)
 
         if status == "read" and entry.get("date_finished"):
-            date_lbl = Gtk.Label(label=f"Terminado: {entry['date_finished']}")
-            date_lbl.add_css_class("caption")
-            date_lbl.add_css_class("dim-label")
+            date_lbl = Gtk.Label(
+                label=_("Finished: {date}").format(date=entry["date_finished"])
+            )
+            date_lbl.add_css_class("caption"); date_lbl.add_css_class("dim-label")
             date_lbl.set_xalign(0)
             txt.append(date_lbl)
 
         box.append(txt)
 
-        # Action buttons
         if status == "reading":
-            done_btn = Gtk.Button(label="✓ Terminado")
-            done_btn.add_css_class("flat")
-            done_btn.add_css_class("suggested-action")
+            done_btn = Gtk.Button(label=_("✓ Done"))
+            done_btn.add_css_class("flat"); done_btn.add_css_class("suggested-action")
             done_btn.set_valign(Gtk.Align.CENTER)
             done_btn.connect("clicked", self._on_mark_done, entry)
             box.append(done_btn)
 
         if status == "want_to_read":
-            start_btn = Gtk.Button(label="▶ Empezar")
+            start_btn = Gtk.Button(label=_("▶ Start"))
             start_btn.add_css_class("flat")
             start_btn.set_valign(Gtk.Align.CENTER)
             start_btn.connect("clicked", self._on_start_reading, entry)
@@ -186,7 +175,7 @@ class ReadingPage(Gtk.Box):
         rm_btn.set_icon_name("list-remove-symbolic")
         rm_btn.add_css_class("flat")
         rm_btn.set_valign(Gtk.Align.CENTER)
-        rm_btn.set_tooltip_text("Quitar de la lista")
+        rm_btn.set_tooltip_text(_("Remove from list"))
         rm_btn.connect("clicked", self._on_remove, entry, row)
         box.append(rm_btn)
 
@@ -194,17 +183,13 @@ class ReadingPage(Gtk.Box):
         return row
 
     def _on_mark_done(self, _, entry):
-        set_reading_status(
-            entry["book_id"], "read",
-            entry["title"], entry["author"],
-        )
+        set_reading_status(entry["book_id"], "read",
+                           entry["title"], entry["author"])
         self.refresh()
 
     def _on_start_reading(self, _, entry):
-        set_reading_status(
-            entry["book_id"], "reading",
-            entry["title"], entry["author"],
-        )
+        set_reading_status(entry["book_id"], "reading",
+                           entry["title"], entry["author"])
         self.refresh()
 
     def _on_remove(self, _, entry, row):

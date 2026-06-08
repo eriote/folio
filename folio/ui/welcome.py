@@ -1,6 +1,5 @@
 """
 First-run welcome window.
-Shown when the library is empty — lets the user pick a folder and import.
 """
 
 import threading
@@ -22,50 +21,43 @@ class WelcomeWindow(Gtk.ApplicationWindow):
 
     def _build_ui(self):
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        root.set_margin_top(48)
-        root.set_margin_bottom(40)
-        root.set_margin_start(64)
-        root.set_margin_end(64)
+        root.set_margin_top(48); root.set_margin_bottom(40)
+        root.set_margin_start(64); root.set_margin_end(64)
         self.set_child(root)
 
-        # Icon placeholder
         icon = Gtk.Image.new_from_icon_name("accessories-dictionary-symbolic")
         icon.set_pixel_size(64)
         icon.add_css_class("dim-label")
         root.append(icon)
 
-        # Title
-        title = Gtk.Label(label="Bienvenido a Folio")
+        title = Gtk.Label(label=_("Welcome to Folio"))
         title.add_css_class("title-1")
         title.set_margin_top(16)
         root.append(title)
 
-        # Subtitle
-        sub = Gtk.Label(label="Tu biblioteca de ebooks personal")
+        sub = Gtk.Label(label=_("Your personal ebook library"))
         sub.add_css_class("dim-label")
         sub.set_margin_top(4)
         sub.set_margin_bottom(32)
         root.append(sub)
 
-        # Folder chooser row
         folder_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         folder_box.set_margin_bottom(24)
 
-        self._folder_lbl = Gtk.Label(label="Ninguna carpeta seleccionada")
+        self._folder_lbl = Gtk.Label(label=_("No folder selected"))
         self._folder_lbl.add_css_class("dim-label")
         self._folder_lbl.set_hexpand(True)
         self._folder_lbl.set_xalign(0)
-        self._folder_lbl.set_ellipsize(3)  # END
+        self._folder_lbl.set_ellipsize(3)
 
-        choose_btn = Gtk.Button(label="Elegir carpeta…")
+        choose_btn = Gtk.Button(label=_("Choose folder…"))
         choose_btn.connect("clicked", self._on_choose_folder)
 
         folder_box.append(self._folder_lbl)
         folder_box.append(choose_btn)
         root.append(folder_box)
 
-        # Import button
-        self._import_btn = Gtk.Button(label="Importar biblioteca")
+        self._import_btn = Gtk.Button(label=_("Import library"))
         self._import_btn.add_css_class("suggested-action")
         self._import_btn.add_css_class("pill")
         self._import_btn.set_sensitive(False)
@@ -73,7 +65,6 @@ class WelcomeWindow(Gtk.ApplicationWindow):
         self._import_btn.connect("clicked", self._on_import)
         root.append(self._import_btn)
 
-        # Progress area (hidden until import starts)
         self._progress_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self._progress_box.set_margin_top(24)
         self._progress_box.set_visible(False)
@@ -92,14 +83,13 @@ class WelcomeWindow(Gtk.ApplicationWindow):
 
     def _on_choose_folder(self, _):
         dialog = Gtk.FileDialog()
-        dialog.set_title("Selecciona tu carpeta de ebooks")
+        dialog.set_title(_("Select your ebooks folder"))
         dialog.select_folder(self, None, self._on_folder_chosen)
 
     def _on_folder_chosen(self, dialog, result):
         try:
             folder = dialog.select_folder_finish(result)
             self._folder = Path(folder.get_path())
-            name = self._folder.name or str(self._folder)
             self._folder_lbl.set_label(str(self._folder))
             self._folder_lbl.remove_css_class("dim-label")
             self._import_btn.set_sensitive(True)
@@ -126,7 +116,7 @@ class WelcomeWindow(Gtk.ApplicationWindow):
         self._progress_lbl.set_label(label)
 
     def _import_finished(self):
-        self._progress_lbl.set_label("¡Listo!")
+        self._progress_lbl.set_label(_("Done!"))
         GLib.timeout_add(600, self._open_main)
 
     def _open_main(self):
