@@ -268,3 +268,136 @@ msgstr "Eliminar"
 
 msgid "unsaved"
 msgstr "sin guardar"
+
+# settings.py
+msgid "Data folder and storage"
+msgstr "Carpeta de datos y almacenamiento"
+
+msgid "E-reader configuration"
+msgstr "Configuración del lector"
+
+msgid "Email"
+msgstr "Correo electrónico"
+
+msgid "Coming soon"
+msgstr "Próximamente"
+
+msgid "Auto-detect"
+msgstr "Detectar automáticamente"
+
+msgid "Add device"
+msgstr "Añadir dispositivo"
+
+msgid "No devices configured yet."
+msgstr "No hay dispositivos configurados."
+
+msgid "Books folder: {f}"
+msgstr "Carpeta de libros: {f}"
+
+msgid "Browse…"
+msgstr "Explorar…"
+
+msgid "Select device folder"
+msgstr "Seleccionar carpeta del dispositivo"
+
+msgid "Select"
+msgstr "Seleccionar"
+
+msgid "No devices detected."
+msgstr "No se detectaron dispositivos."
+
+msgid "{n} device added."
+msgid_plural "{n} devices added."
+msgstr[0] "{n} dispositivo añadido."
+msgstr[1] "{n} dispositivos añadidos."
+
+msgid "All detected devices are already configured."
+msgstr "Todos los dispositivos detectados ya están configurados."
+
+msgid "Edit device"
+msgstr "Editar dispositivo"
+
+msgid "Name"
+msgstr "Nombre"
+
+msgid "Path"
+msgstr "Ruta"
+
+msgid "Books folder"
+msgstr "Carpeta de libros"
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "Data folder"
+msgstr "Carpeta de datos"
+
+msgid "To change the data folder, set the FOLIO_DATA_DIR environment variable before launching."
+msgstr "Para cambiar la carpeta de datos, establece la variable de entorno FOLIO_DATA_DIR antes de lanzar la app."
+
+# devices.py
+msgid "Source file not found: {path}"
+msgstr "Archivo de origen no encontrado: {path}"
+
+msgid "Sent to {name}"
+msgstr "Enviado a {name}"
+
+# book_detail.py — send to device
+msgid "Send to device"
+msgstr "Enviar al dispositivo"
+
+msgid "No devices connected."
+msgstr "No hay dispositivos conectados."
+
+msgid "Choose a device:"
+msgstr "Elegir un dispositivo:"
+
+msgid "Send"
+msgstr "Enviar"
+
+# settings.py — WiFi/SFTP dialog
+msgid "Cable / USB:"
+msgstr "Cable / USB:"
+
+msgid "WiFi (HTTP):"
+msgstr "WiFi (HTTP):"
+
+msgid "Folder:"
+msgstr "Carpeta:"
+
+msgid "User:"
+msgstr "Usuario:"
+
+msgid "Password:"
+msgstr "Contraseña:"
+
+msgid "Protocol auto-detected (KOReader / FileBrowser / BOOX Drop)."
+msgstr "Protocolo detectado automáticamente (KOReader / FileBrowser / BOOX Drop)."
+
+msgid "SFTP / SSH (KOReader):"
+msgstr "SFTP / SSH (KOReader):"
+
+msgid "Name is required."
+msgstr "El nombre es obligatorio."
+
+msgid "Configure at least one connection."
+msgstr "Configura al menos una conexión."
+
+msgid "Cable: {p}"
+msgstr "Cable: {p}"
+
+msgid "WiFi: {ip}"
+msgstr "WiFi: {ip}"
+
+msgid "SFTP: {ip}:{port}"
+msgstr "SFTP: {ip}:{port}"
+
+# devices.py — send results
+msgid "Sent to {name} via WiFi"
+msgstr "Enviado a {name} por WiFi"
+
+msgid "Sent to {name} via SFTP"
+msgstr "Enviado a {name} por SFTP"
+
+msgid "Device not connected."
+msgstr "El dispositivo no está conectado."

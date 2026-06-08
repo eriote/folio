@@ -8,7 +8,7 @@ from pathlib import Path
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
+from gi.repository import Gtk, GLib, GdkPixbuf, Gdk, Gio
 
 from folio.database import (
     get_all_books, search_books, count_books,
@@ -20,6 +20,8 @@ from folio.scanner import import_epub
 from folio.ui.book_detail import BookDetail
 from folio.ui.edit_books import EditPage
 from folio.ui.reading import ReadingPage
+from folio.ui.settings import SettingsPage
+from folio.devices import connected_devices
 
 CARD_W = 150
 CARD_H = 225
@@ -37,7 +39,7 @@ _SIDEBAR_TABS = [
     ("reading",  "Reading",  "bookmark-symbolic",           True),
     ("edit",     "Edit",     "document-edit-symbolic",      True),
     ("discover", "Discover", "starred-symbolic",            False),
-    ("settings", "Settings", "preferences-system-symbolic", False),
+    ("settings", "Settings", "preferences-system-symbolic", True),
 ]
 
 _SORT_LABELS = ["Recent", "Title A–Z", "Author", "Series", "Year"]
@@ -195,7 +197,11 @@ class MainWindow(Gtk.ApplicationWindow):
         self._view_mode = "grid"
         self._apply_css()
         self._build_ui()
+        self._refresh_sidebar_devices()
         self._load_books()
+        self._vol_monitor = Gio.VolumeMonitor.get()
+        self._vol_monitor.connect("mount-added",   lambda _m, _v: GLib.idle_add(self._refresh_sidebar_devices))
+        self._vol_monitor.connect("mount-removed",  lambda _m, _v: GLib.idle_add(self._refresh_sidebar_devices))
 
     def _apply_css(self):
         provider = Gtk.CssProvider()
@@ -267,6 +273,13 @@ class MainWindow(Gtk.ApplicationWindow):
             self._sidebar_list.append(row)
             self._sidebar_rows[key] = row
         sidebar_box.append(self._sidebar_list)
+
+        sidebar_box.append(Gtk.Separator())
+        self._sidebar_devices_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self._sidebar_devices_box.set_margin_top(2)
+        self._sidebar_devices_box.set_margin_bottom(2)
+        sidebar_box.append(self._sidebar_devices_box)
+
         paned.set_start_child(sidebar_box)
 
         # ── Main stack ────────────────────────────────────────────────────
@@ -368,6 +381,10 @@ class MainWindow(Gtk.ApplicationWindow):
         self._edit_page = EditPage(on_book_deleted=self._on_book_deleted)
         self._stack.add_named(self._edit_page, "edit")
 
+        # ── Settings ──────────────────────────────────────────────────────
+        self._settings_page = SettingsPage()
+        self._stack.add_named(self._settings_page, "settings")
+
         # ── Collection (author / series) ──────────────────────────────────
         coll_outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self._coll_title = Gtk.Label()
@@ -408,6 +425,23 @@ class MainWindow(Gtk.ApplicationWindow):
                 elif key == "edit":
                     self._edit_page.refresh()
                 break
+
+    def _refresh_sidebar_devices(self):
+        while self._sidebar_devices_box.get_first_child():
+            self._sidebar_devices_box.remove(self._sidebar_devices_box.get_first_child())
+        for dev in connected_devices():
+            row = Gtk.Box(spacing=8)
+            row.set_margin_start(14); row.set_margin_end(10)
+            row.set_margin_top(5);   row.set_margin_bottom(5)
+            dot = Gtk.Label(label="⬤")
+            dot.add_css_class("success")
+            row.append(dot)
+            lbl = Gtk.Label(label=dev["name"])
+            lbl.set_xalign(0); lbl.set_hexpand(True)
+            lbl.add_css_class("caption")
+            lbl.set_ellipsize(3)
+            row.append(lbl)
+            self._sidebar_devices_box.append(row)
 
     def _on_stack_page_changed(self, stack, _param):
         name = stack.get_visible_child_name()
@@ -530,7 +564,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ── Import ────────────────────────────────────────────────────────────────
 
-    def _on_import_clicked(self, _):
+    def _on_import_clicked(self, _btn):
         dialog = Gtk.FileChooserDialog(
             title=_("Select EPUB files"),
             transient_for=self,

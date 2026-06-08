@@ -12,6 +12,7 @@ from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
 from folio.database import (
     get_book, get_reading_status, set_reading_status, remove_from_reading_log
 )
+from folio.devices import connected_devices, send_book_to_device
 from folio.paths import COVERS_DIR
 
 COVER_W, COVER_H = 300, 450
@@ -117,6 +118,12 @@ class BookDetail(Gtk.Box):
         self._remove_btn.set_visible(False)
         self._remove_btn.connect("clicked", self._on_remove_clicked)
         btn_row.append(self._remove_btn)
+
+        self._send_btn = Gtk.Button(label=_("Send to device"))
+        self._send_btn.set_icon_name("phone-symbolic")
+        self._send_btn.add_css_class("pill")
+        self._send_btn.connect("clicked", self._on_send_clicked)
+        btn_row.append(self._send_btn)
 
         right.append(btn_row)
 
@@ -238,3 +245,75 @@ class BookDetail(Gtk.Box):
         series = self._book.get("series_name") or ""
         if series:
             self._on_open_series(series)
+
+    def _on_send_clicked(self, _btn):
+        if not self._book:
+            return
+        devices = connected_devices()
+        if not devices:
+            dlg = Gtk.MessageDialog(
+                transient_for=self.get_root(), modal=True,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.OK,
+                text=_("No devices connected."),
+            )
+            dlg.connect("response", lambda d, _r: d.destroy())
+            dlg.show()
+            return
+
+        dlg = Gtk.Dialog(
+            title=_("Send to device"),
+            transient_for=self.get_root(),
+            modal=True,
+        )
+        dlg.set_default_size(300, 180)
+        box = dlg.get_content_area()
+        box.set_spacing(8)
+        box.set_margin_top(12); box.set_margin_start(12)
+        box.set_margin_end(12); box.set_margin_bottom(8)
+
+        lbl = Gtk.Label(label=_("Choose a device:"))
+        lbl.set_xalign(0)
+        box.append(lbl)
+
+        lb = Gtk.ListBox()
+        lb.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        lb.add_css_class("boxed-list")
+        for dev in devices:
+            row = Gtk.ListBoxRow()
+            row_box = Gtk.Box(spacing=10)
+            row_box.set_margin_top(8); row_box.set_margin_bottom(8)
+            row_box.set_margin_start(12); row_box.set_margin_end(12)
+            img = Gtk.Image.new_from_icon_name("phone-symbolic")
+            img.set_pixel_size(16)
+            row_box.append(img)
+            row_box.append(Gtk.Label(label=dev["name"]))
+            row.set_child(row_box)
+            row._device = dev
+            lb.append(row)
+        lb.select_row(lb.get_row_at_index(0))
+        box.append(lb)
+
+        dlg.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        ok = dlg.add_button(_("Send"), Gtk.ResponseType.ACCEPT)
+        ok.add_css_class("suggested-action")
+
+        book = self._book
+
+        def _on_resp(d, resp):
+            if resp == Gtk.ResponseType.ACCEPT:
+                sel = lb.get_selected_row()
+                if sel:
+                    ok_result, msg = send_book_to_device(book["epub_path"], sel._device)
+                    info = Gtk.MessageDialog(
+                        transient_for=self.get_root(), modal=True,
+                        message_type=Gtk.MessageType.INFO if ok_result else Gtk.MessageType.ERROR,
+                        buttons=Gtk.ButtonsType.OK,
+                        text=msg,
+                    )
+                    info.connect("response", lambda d2, _r: d2.destroy())
+                    info.show()
+            d.destroy()
+
+        dlg.connect("response", _on_resp)
+        dlg.show()

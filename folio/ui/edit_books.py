@@ -358,7 +358,7 @@ class EditPage(Gtk.Box):
 
     # ── Cover editing ─────────────────────────────────────────────────────
 
-    def _on_pick_cover(self, _):
+    def _on_pick_cover(self, _btn):
         if not self._current_id:
             return
         dialog = Gtk.FileChooserDialog(
@@ -392,7 +392,7 @@ class EditPage(Gtk.Box):
         else:
             dialog.destroy()
 
-    def _on_fetch_cover(self, _):
+    def _on_fetch_cover(self, _btn):
         if not self._current_id:
             return
         title = self._e_title.get_text().strip()
@@ -415,7 +415,7 @@ class EditPage(Gtk.Box):
 
     # ── Save / Delete ─────────────────────────────────────────────────────
 
-    def _on_save(self, _):
+    def _on_save(self, _btn):
         if not self._current_id:
             return
 
@@ -471,7 +471,7 @@ class EditPage(Gtk.Box):
                     if lbl2:
                         lbl2.set_label(", ".join(authors))
 
-    def _on_delete(self, _):
+    def _on_delete(self, _btn):
         if not self._current_id:
             return
         dialog = Gtk.MessageDialog(

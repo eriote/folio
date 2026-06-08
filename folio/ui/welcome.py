@@ -81,7 +81,7 @@ class WelcomeWindow(Gtk.ApplicationWindow):
         self._progress_box.append(self._progress_lbl)
         root.append(self._progress_box)
 
-    def _on_choose_folder(self, _):
+    def _on_choose_folder(self, _btn):
         dialog = Gtk.FileDialog()
         dialog.set_title(_("Select your ebooks folder"))
         dialog.select_folder(self, None, self._on_folder_chosen)
@@ -96,7 +96,7 @@ class WelcomeWindow(Gtk.ApplicationWindow):
         except Exception:
             pass
 
-    def _on_import(self, _):
+    def _on_import(self, _btn):
         if not self._folder:
             return
         self._import_btn.set_sensitive(False)
