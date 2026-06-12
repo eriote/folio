@@ -1,0 +1,403 @@
+# Spanish translation for Folio
+# Copyright (C) 2026
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# welcome.py
+msgid "Welcome to Folio"
+msgstr "Bienvenido a Folio"
+
+msgid "Your personal ebook library"
+msgstr "Tu biblioteca de ebooks personal"
+
+msgid "No folder selected"
+msgstr "Ninguna carpeta seleccionada"
+
+msgid "Choose folder…"
+msgstr "Elegir carpeta…"
+
+msgid "Import library"
+msgstr "Importar biblioteca"
+
+msgid "Select your ebooks folder"
+msgstr "Selecciona tu carpeta de ebooks"
+
+msgid "Done!"
+msgstr "¡Listo!"
+
+# window.py — sidebar
+msgid "Library"
+msgstr "Biblioteca"
+
+msgid "Reading"
+msgstr "Leyendo"
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Discover"
+msgstr "Descubrir"
+
+msgid "Settings"
+msgstr "Ajustes"
+
+# window.py — toolbar
+msgid "Sort:"
+msgstr "Ordenar:"
+
+msgid "Recent"
+msgstr "Recientes"
+
+msgid "Title A–Z"
+msgstr "Título A–Z"
+
+msgid "Author"
+msgstr "Autor"
+
+msgid "Series"
+msgstr "Serie"
+
+msgid "Year"
+msgstr "Año"
+
+msgid "Grid view"
+msgstr "Vista cuadrícula"
+
+msgid "List view"
+msgstr "Vista lista"
+
+# window.py — header
+msgid "Back"
+msgstr "Volver"
+
+msgid "Add books"
+msgstr "Añadir libros"
+
+msgid "Search…"
+msgstr "Buscar…"
+
+# window.py — counts
+msgid "{shown} of {total} books"
+msgstr "{shown} de {total} libros"
+
+msgid "{n} book"
+msgid_plural "{n} books"
+msgstr[0] "{n} libro"
+msgstr[1] "{n} libros"
+
+# window.py — collection titles
+msgid "Author: {name}"
+msgstr "Autor: {name}"
+
+msgid "Series: {name}"
+msgstr "Serie: {name}"
+
+msgid "vol. {num}"
+msgstr "vol. {num}"
+
+# window.py — import dialog
+msgid "Select EPUB files"
+msgstr "Seleccionar archivos EPUB"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Add"
+msgstr "Añadir"
+
+msgid "EPUB files (*.epub)"
+msgstr "Archivos EPUB (*.epub)"
+
+msgid "Adding books"
+msgstr "Añadiendo libros"
+
+msgid "Preparing…"
+msgstr "Preparando…"
+
+msgid "Importing: {name}"
+msgstr "Importando: {name}"
+
+msgid "Close"
+msgstr "Cerrar"
+
+msgid "{n} book added"
+msgid_plural "{n} books added"
+msgstr[0] "{n} libro añadido"
+msgstr[1] "{n} libros añadidos"
+
+msgid "{n} skipped (already existed)"
+msgid_plural "{n} skipped (already existed)"
+msgstr[0] "{n} omitido (ya existía)"
+msgstr[1] "{n} omitidos (ya existían)"
+
+# book_detail.py
+msgid "▶ Start reading"
+msgstr "▶ Empezar a leer"
+
+msgid "+ Want to read"
+msgstr "+ Por leer"
+
+msgid "✕ Remove"
+msgstr "✕ Quitar de lista"
+
+msgid "Status: {status}"
+msgstr "Estado: {status}"
+
+msgid "Read ✓"
+msgstr "Leído ✓"
+
+msgid "Want to read"
+msgstr "En lista"
+
+msgid "{pages} pages"
+msgstr "{pages} páginas"
+
+msgid "No description."
+msgstr "Sin descripción."
+
+msgid "Series: {series}"
+msgstr "Serie: {series}"
+
+# reading.py
+msgid "Read"
+msgstr "Leídos"
+
+msgid "Nothing here yet."
+msgstr "Nada aquí todavía."
+
+msgid "✓ Done"
+msgstr "✓ Terminado"
+
+msgid "▶ Start"
+msgstr "▶ Empezar"
+
+msgid "Remove from list"
+msgstr "Quitar de la lista"
+
+msgid "Finished: {date}"
+msgstr "Terminado: {date}"
+
+# edit_books.py
+msgid "Filter books…"
+msgstr "Filtrar libros…"
+
+msgid "Select a book from the list"
+msgstr "Selecciona un libro de la lista"
+
+msgid "Choose image…"
+msgstr "Elegir imagen…"
+
+msgid "Search online"
+msgstr "Buscar en internet"
+
+msgid "Title"
+msgstr "Título"
+
+msgid "Authors"
+msgstr "Autores"
+
+msgid "separated by comma"
+msgstr "separados por coma"
+
+msgid "Pages"
+msgstr "Páginas"
+
+msgid "Vol."
+msgstr "Vol."
+
+msgid "Description"
+msgstr "Descripción"
+
+msgid "Save changes"
+msgstr "Guardar cambios"
+
+msgid "Delete book"
+msgstr "Eliminar libro"
+
+msgid "Saved."
+msgstr "Guardado."
+
+msgid "Title cannot be empty."
+msgstr "El título no puede estar vacío."
+
+msgid "Unknown"
+msgstr "Desconocido"
+
+msgid "Current cover"
+msgstr "Portada actual"
+
+msgid "No cover"
+msgstr "Sin portada"
+
+msgid "Select cover image"
+msgstr "Seleccionar imagen de portada"
+
+msgid "Use this image"
+msgstr "Usar esta imagen"
+
+msgid "Images (jpg, png, webp)"
+msgstr "Imágenes (jpg, png, webp)"
+
+msgid "New cover (unsaved)"
+msgstr "Nueva portada (sin guardar)"
+
+msgid "Error reading image"
+msgstr "Error al leer la imagen"
+
+msgid "Searching online…"
+msgstr "Buscando en internet…"
+
+msgid "Cover downloaded (unsaved)"
+msgstr "Portada descargada (sin guardar)"
+
+msgid "Not found online"
+msgstr "No encontrada en internet"
+
+msgid "Delete this book?"
+msgstr "¿Eliminar este libro?"
+
+msgid "It will be removed from the library. The epub file will not be deleted."
+msgstr "Se eliminará de la biblioteca. El archivo epub no se borrará."
+
+msgid "Delete"
+msgstr "Eliminar"
+
+msgid "unsaved"
+msgstr "sin guardar"
+
+# settings.py
+msgid "Data folder and storage"
+msgstr "Carpeta de datos y almacenamiento"
+
+msgid "E-reader configuration"
+msgstr "Configuración del lector"
+
+msgid "Email"
+msgstr "Correo electrónico"
+
+msgid "Coming soon"
+msgstr "Próximamente"
+
+msgid "Auto-detect"
+msgstr "Detectar automáticamente"
+
+msgid "Add device"
+msgstr "Añadir dispositivo"
+
+msgid "No devices configured yet."
+msgstr "No hay dispositivos configurados."
+
+msgid "Books folder: {f}"
+msgstr "Carpeta de libros: {f}"
+
+msgid "Browse…"
+msgstr "Explorar…"
+
+msgid "Select device folder"
+msgstr "Seleccionar carpeta del dispositivo"
+
+msgid "Select"
+msgstr "Seleccionar"
+
+msgid "No devices detected."
+msgstr "No se detectaron dispositivos."
+
+msgid "{n} device added."
+msgid_plural "{n} devices added."
+msgstr[0] "{n} dispositivo añadido."
+msgstr[1] "{n} dispositivos añadidos."
+
+msgid "All detected devices are already configured."
+msgstr "Todos los dispositivos detectados ya están configurados."
+
+msgid "Edit device"
+msgstr "Editar dispositivo"
+
+msgid "Name"
+msgstr "Nombre"
+
+msgid "Path"
+msgstr "Ruta"
+
+msgid "Books folder"
+msgstr "Carpeta de libros"
+
+msgid "Save"
+msgstr "Guardar"
+
+msgid "Data folder"
+msgstr "Carpeta de datos"
+
+msgid "To change the data folder, set the FOLIO_DATA_DIR environment variable before launching."
+msgstr "Para cambiar la carpeta de datos, establece la variable de entorno FOLIO_DATA_DIR antes de lanzar la app."
+
+# devices.py
+msgid "Source file not found: {path}"
+msgstr "Archivo de origen no encontrado: {path}"
+
+msgid "Sent to {name}"
+msgstr "Enviado a {name}"
+
+# book_detail.py — send to device
+msgid "Send to device"
+msgstr "Enviar al dispositivo"
+
+msgid "No devices connected."
+msgstr "No hay dispositivos conectados."
+
+msgid "Choose a device:"
+msgstr "Elegir un dispositivo:"
+
+msgid "Send"
+msgstr "Enviar"
+
+# settings.py — WiFi/SFTP dialog
+msgid "Cable / USB:"
+msgstr "Cable / USB:"
+
+msgid "WiFi (HTTP):"
+msgstr "WiFi (HTTP):"
+
+msgid "Folder:"
+msgstr "Carpeta:"
+
+msgid "User:"
+msgstr "Usuario:"
+
+msgid "Password:"
+msgstr "Contraseña:"
+
+msgid "Protocol auto-detected (KOReader / FileBrowser / BOOX Drop)."
+msgstr "Protocolo detectado automáticamente (KOReader / FileBrowser / BOOX Drop)."
+
+msgid "SFTP / SSH (KOReader):"
+msgstr "SFTP / SSH (KOReader):"
+
+msgid "Name is required."
+msgstr "El nombre es obligatorio."
+
+msgid "Configure at least one connection."
+msgstr "Configura al menos una conexión."
+
+msgid "Cable: {p}"
+msgstr "Cable: {p}"
+
+msgid "WiFi: {ip}"
+msgstr "WiFi: {ip}"
+
+msgid "SFTP: {ip}:{port}"
+msgstr "SFTP: {ip}:{port}"
+
+# devices.py — send results
+msgid "Sent to {name} via WiFi"
+msgstr "Enviado a {name} por WiFi"
+
+msgid "Sent to {name} via SFTP"
+msgstr "Enviado a {name} por SFTP"
+
+msgid "Device not connected."
+msgstr "El dispositivo no está conectado."

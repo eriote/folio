@@ -1,3 +1,12 @@
+# Backup scripts de la app anterior
+biblioteca*.py
+añadir_libro*.py
+biblioteca-standalone*.py
+biblioteca-app-*.py
+biblioteca_app*.py
+# Datos personales
+biblioteca*.json
+.biblioteca*.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

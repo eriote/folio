@@ -14,15 +14,19 @@ from gi.repository import Gtk, GLib, GdkPixbuf, Gdk, Gio
 from folio.database import (
     get_all_books, search_books, count_books,
     get_books_by_author, get_books_by_series,
+    get_profiles, create_profile, rename_profile, delete_profile,
+    get_or_create_default_profile,
 )
 from folio.paths import COVERS_DIR, PREFS_FILE
 from folio.scanner import import_epub
 
 from folio.ui.book_detail import BookDetail
 from folio.ui.device_page import DevicePage
+from folio.ui.discover import DiscoverPage
 from folio.ui.edit_books import EditPage
 from folio.ui.reading import ReadingPage
 from folio.ui.settings import SettingsPage
+from folio.ui.stats import StatsPage
 from folio.devices import connected_devices
 
 def _load_prefs() -> dict:
@@ -52,11 +56,12 @@ _SIDEBAR_CSS = """
 """
 
 _SIDEBAR_TABS = [
-    ("library",  "Library",  "view-grid-symbolic",          True),
-    ("reading",  "Reading",  "bookmark-symbolic",           True),
-    ("edit",     "Edit",     "document-edit-symbolic",      True),
-    ("discover", "Discover", "starred-symbolic",            False),
-    ("settings", "Settings", "preferences-system-symbolic", True),
+    ("library",  "Library",   "view-grid-symbolic",          True),
+    ("reading",  "Reading",   "bookmark-symbolic",           True),
+    ("stats",    "Statistics","office-chart-bar-symbolic",   True),
+    ("edit",     "Edit",      "document-edit-symbolic",      True),
+    ("discover", "Discover",  "starred-symbolic",            True),
+    ("settings", "Settings",  "preferences-system-symbolic", True),
 ]
 
 _SORT_LABELS = ["Recent", "Title A–Z", "Author", "Series", "Year"]
@@ -212,6 +217,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self._detail_came_from = "grid"
         self._sort = "recientes"
         self._view_mode = "grid"
+        self._active_profile_id: int = get_or_create_default_profile()
         self._apply_css()
         self._build_ui()
         self._refresh_sidebar_devices()
@@ -270,6 +276,20 @@ class MainWindow(Gtk.ApplicationWindow):
         self._count_lbl.add_css_class("dim-label")
         self._count_lbl.add_css_class("caption")
         header.pack_end(self._count_lbl)
+
+        # Profile switcher
+        self._profile_btn = Gtk.MenuButton()
+        self._profile_btn.set_icon_name("person-symbolic")
+        self._profile_btn.add_css_class("flat")
+        self._profile_btn.set_tooltip_text(_("Switch profile"))
+        self._profile_popover = Gtk.Popover()
+        self._profile_pop_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self._profile_pop_box.set_margin_top(4); self._profile_pop_box.set_margin_bottom(4)
+        self._profile_pop_box.set_margin_start(4); self._profile_pop_box.set_margin_end(4)
+        self._profile_popover.set_child(self._profile_pop_box)
+        self._profile_btn.set_popover(self._profile_popover)
+        header.pack_end(self._profile_btn)
+        self._rebuild_profile_menu()
 
         # ── Paned: sidebar + stack ─────────────────────────────────────────
         paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
@@ -416,6 +436,14 @@ class MainWindow(Gtk.ApplicationWindow):
         self._edit_page = EditPage(on_book_deleted=self._on_book_deleted)
         self._stack.add_named(self._edit_page, "edit")
 
+        # ── Statistics ────────────────────────────────────────────────────
+        self._stats_page = StatsPage()
+        self._stack.add_named(self._stats_page, "stats")
+
+        # ── Discover ──────────────────────────────────────────────────────
+        self._discover_page = DiscoverPage(on_open_book=self._open_book_detail)
+        self._stack.add_named(self._discover_page, "discover")
+
         # ── Settings ──────────────────────────────────────────────────────
         self._settings_page = SettingsPage()
         self._stack.add_named(self._settings_page, "settings")
@@ -460,10 +488,105 @@ class MainWindow(Gtk.ApplicationWindow):
                 self._search.set_visible(key == "library")
                 self._count_lbl.set_visible(key == "library")
                 if key == "reading":
-                    self._reading_page.refresh()
+                    self._reading_page.set_profile(self._active_profile_id)
+                elif key == "stats":
+                    self._stats_page.refresh(self._active_profile_id)
+                elif key == "discover":
+                    self._discover_page.refresh(self._active_profile_id)
                 elif key == "edit":
                     self._edit_page.refresh()
                 break
+
+    # ── Profile management ────────────────────────────────────────────────────
+
+    def _rebuild_profile_menu(self):
+        while self._profile_pop_box.get_first_child():
+            self._profile_pop_box.remove(self._profile_pop_box.get_first_child())
+
+        profiles = get_profiles()
+        for p in profiles:
+            btn = Gtk.Button(label=("✓ " if p["id"] == self._active_profile_id else "    ") + p["name"])
+            btn.add_css_class("flat")
+            pid = p["id"]
+            btn.connect("clicked", lambda _, _pid=pid: self._switch_profile(_pid))
+            self._profile_pop_box.append(btn)
+
+        self._profile_pop_box.append(Gtk.Separator())
+
+        new_btn = Gtk.Button(label=_("+ New profile…"))
+        new_btn.add_css_class("flat")
+        new_btn.connect("clicked", self._on_new_profile)
+        self._profile_pop_box.append(new_btn)
+
+        if len(profiles) > 1:
+            del_btn = Gtk.Button(label=_("Delete current profile…"))
+            del_btn.add_css_class("flat")
+            del_btn.add_css_class("destructive-action")
+            del_btn.connect("clicked", self._on_delete_profile)
+            self._profile_pop_box.append(del_btn)
+
+    def _switch_profile(self, profile_id: int):
+        self._profile_popover.popdown()
+        self._active_profile_id = profile_id
+        _save_prefs({**_load_prefs(), "active_profile_id": profile_id})
+        self._rebuild_profile_menu()
+        self._reading_page.set_profile(profile_id)
+        if self._stack.get_visible_child_name() == "stats":
+            self._stats_page.refresh(profile_id)
+        if self._stack.get_visible_child_name() == "discover":
+            self._discover_page.refresh(profile_id)
+
+    def _on_new_profile(self, _btn):
+        self._profile_popover.popdown()
+        dlg = Gtk.Dialog(title=_("New profile"), transient_for=self, modal=True)
+        dlg.set_default_size(300, -1)
+        box = dlg.get_content_area()
+        box.set_margin_top(16); box.set_margin_start(16)
+        box.set_margin_end(16); box.set_margin_bottom(8)
+        entry = Gtk.Entry()
+        entry.set_placeholder_text(_("Profile name"))
+        box.append(entry)
+        dlg.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        ok = dlg.add_button(_("Create"), Gtk.ResponseType.OK)
+        ok.add_css_class("suggested-action")
+
+        def on_resp(d, r):
+            if r == Gtk.ResponseType.OK:
+                name = entry.get_text().strip()
+                if name:
+                    pid = create_profile(name)
+                    self._switch_profile(pid)
+            d.destroy()
+
+        dlg.connect("response", on_resp)
+        dlg.show()
+
+    def _on_delete_profile(self, _btn):
+        self._profile_popover.popdown()
+        profiles = get_profiles()
+        if len(profiles) <= 1:
+            return
+        current_name = next((p["name"] for p in profiles if p["id"] == self._active_profile_id), "")
+        confirm = Gtk.MessageDialog(
+            transient_for=self, modal=True,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.CANCEL,
+            text=_('Delete profile "{name}" and all its reading data?').format(name=current_name),
+        )
+        confirm.add_button(_("Delete"), Gtk.ResponseType.ACCEPT)
+        confirm.get_widget_for_response(Gtk.ResponseType.ACCEPT).add_css_class("destructive-action")
+
+        def on_resp(d, r):
+            if r == Gtk.ResponseType.ACCEPT:
+                pid_to_del = self._active_profile_id
+                remaining = [p for p in profiles if p["id"] != pid_to_del]
+                self._switch_profile(remaining[0]["id"])
+                delete_profile(pid_to_del)
+                self._rebuild_profile_menu()
+            d.destroy()
+
+        confirm.connect("response", on_resp)
+        confirm.show()
 
     def _refresh_sidebar_devices(self):
         while self._sidebar_devices_lb.get_first_child():
@@ -507,6 +630,8 @@ class MainWindow(Gtk.ApplicationWindow):
         root = "library" if name in ("grid", "detail", "collection") else name
         if root in self._sidebar_rows:
             self._sidebar_list.select_row(self._sidebar_rows[root])
+        self._search.set_visible(name == "grid")
+        self._count_lbl.set_visible(name == "grid")
 
     def _open_book_detail(self, book_id: int):
         self._detail_came_from = self._stack.get_visible_child_name()
