@@ -4,9 +4,11 @@ KoReader reading statistics.
 """
 
 import sqlite3
+import subprocess
 import tempfile
 import threading
 import unicodedata
+import urllib.parse
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -300,8 +302,10 @@ class DevicePage(Gtk.Box):
         self._device = None
         self._all_files: list[dict] = []
         self._filter_not_in_lib = False
+        self._author_filter = ""
         self._sort_mode = 0
         self._kr_loaded = False
+        self._kr_stats: dict = {}
         self._build_ui()
 
     def _build_ui(self):
@@ -428,10 +432,16 @@ class DevicePage(Gtk.Box):
         ctrl.set_margin_bottom(8)
 
         self._search_entry = Gtk.SearchEntry()
-        self._search_entry.set_placeholder_text(_("Search files…"))
+        self._search_entry.set_placeholder_text(_("Search title…"))
         self._search_entry.set_hexpand(True)
         self._search_entry.connect("search-changed", self._on_search_changed)
         ctrl.append(self._search_entry)
+
+        self._author_entry = Gtk.SearchEntry()
+        self._author_entry.set_placeholder_text(_("Filter by author…"))
+        self._author_entry.set_hexpand(True)
+        self._author_entry.connect("search-changed", self._on_author_changed)
+        ctrl.append(self._author_entry)
 
         self._filter_btn = Gtk.ToggleButton(label=_("Not in library"))
         self._filter_btn.add_css_class("pill")
@@ -471,28 +481,37 @@ class DevicePage(Gtk.Box):
     def _build_kr_page(self) -> Gtk.Box:
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
-        spinner_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        spinner_box.set_halign(Gtk.Align.CENTER)
-        spinner_box.set_valign(Gtk.Align.CENTER)
-        spinner_box.set_margin_top(24)
-        spinner_box.set_margin_bottom(16)
+        # Top toolbar: spinner + email button
+        kr_toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        kr_toolbar.set_margin_start(12)
+        kr_toolbar.set_margin_end(12)
+        kr_toolbar.set_margin_top(8)
+        kr_toolbar.set_margin_bottom(4)
 
         self._kr_spinner = Gtk.Spinner()
-        self._kr_spinner.set_size_request(32, 32)
-        spinner_box.append(self._kr_spinner)
+        kr_toolbar.append(self._kr_spinner)
 
         self._kr_status_lbl = Gtk.Label(label="")
+        self._kr_status_lbl.set_xalign(0)
+        self._kr_status_lbl.set_hexpand(True)
         self._kr_status_lbl.add_css_class("dim-label")
         self._kr_status_lbl.add_css_class("caption")
-        spinner_box.append(self._kr_status_lbl)
+        kr_toolbar.append(self._kr_status_lbl)
 
-        page.append(spinner_box)
+        self._email_btn = Gtk.Button(label=_("Send weekly summary…"))
+        self._email_btn.set_icon_name("mail-send-symbolic")
+        self._email_btn.add_css_class("pill")
+        self._email_btn.set_visible(False)
+        self._email_btn.connect("clicked", self._on_send_email_clicked)
+        kr_toolbar.append(self._email_btn)
 
-        # Stats cards row
+        page.append(kr_toolbar)
+
+        # Stats cards — row 1
         self._stats_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self._stats_row.set_margin_start(12)
         self._stats_row.set_margin_end(12)
-        self._stats_row.set_margin_bottom(8)
+        self._stats_row.set_margin_bottom(4)
         self._stats_row.set_visible(False)
         page.append(self._stats_row)
 
@@ -502,6 +521,21 @@ class DevicePage(Gtk.Box):
         self._stats_row.append(self._card_speed)
         self._card_hour = _make_stat_card(_("Best hour"), "–")
         self._stats_row.append(self._card_hour)
+
+        # Stats cards — row 2
+        self._stats_row2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self._stats_row2.set_margin_start(12)
+        self._stats_row2.set_margin_end(12)
+        self._stats_row2.set_margin_bottom(8)
+        self._stats_row2.set_visible(False)
+        page.append(self._stats_row2)
+
+        self._card_week = _make_stat_card(_("This week"), "–")
+        self._stats_row2.append(self._card_week)
+        self._card_total = _make_stat_card(_("Total read"), "–")
+        self._stats_row2.append(self._card_total)
+        self._card_finished = _make_stat_card(_("Books finished"), "–")
+        self._stats_row2.append(self._card_finished)
 
         # Recent reads heading
         self._kr_heading = Gtk.Label(label=_("Recently read"))
@@ -567,10 +601,12 @@ class DevicePage(Gtk.Box):
     def _reset_lib_tab(self):
         self._all_files = []
         self._filter_not_in_lib = False
+        self._author_filter = ""
         self._sort_mode = 0
         self._filter_btn.set_active(False)
         self._sort_dd.set_selected(0)
         self._search_entry.set_text("")
+        self._author_entry.set_text("")
         self._lib_status_lbl.set_label("")
         self._lib_count_lbl.set_label("")
         self._import_btn.set_visible(False)
@@ -580,9 +616,12 @@ class DevicePage(Gtk.Box):
 
     def _reset_kr_tab(self):
         self._kr_loaded = False
+        self._kr_stats = {}
         self._kr_status_lbl.set_label("")
         self._stats_row.set_visible(False)
+        self._stats_row2.set_visible(False)
         self._kr_heading.set_visible(False)
+        self._email_btn.set_visible(False)
         while self._kr_list.get_first_child():
             self._kr_list.remove(self._kr_list.get_first_child())
 
@@ -613,11 +652,20 @@ class DevicePage(Gtk.Box):
             return
 
         lib_books = get_all_books()
-        lib_norms = {_norm(b["title"]) for b in lib_books}
+        lib_by_norm = {_norm(b["title"]): b for b in lib_books}
 
         for fi in files:
             stem = Path(fi.get("name", "")).stem.replace("_", " ")
-            fi["in_library"] = _norm(stem) in lib_norms
+            norm = _norm(stem)
+            book = lib_by_norm.get(norm)
+            fi["in_library"] = book is not None
+            if book:
+                authors = [a["name"] for a in book.get("authors", [])]
+                fi["authors"] = ", ".join(authors)
+            else:
+                # try to extract author from "Author - Title.epub" pattern
+                parts = stem.split(" - ", 1)
+                fi["authors"] = parts[0].strip() if len(parts) == 2 else ""
 
         GLib.idle_add(self._on_files_loaded, files, err)
 
@@ -636,6 +684,7 @@ class DevicePage(Gtk.Box):
 
     def _apply_filters(self):
         query = self._search_entry.get_text().lower()
+        author_q = self._author_entry.get_text().lower()
         shown = self._all_files
 
         if self._filter_not_in_lib:
@@ -643,6 +692,9 @@ class DevicePage(Gtk.Box):
 
         if query:
             shown = [f for f in shown if query in f.get("name", "").lower()]
+
+        if author_q:
+            shown = [f for f in shown if author_q in f.get("authors", "").lower()]
 
         mode = self._sort_dd.get_selected()
         if mode == 0:
@@ -683,6 +735,9 @@ class DevicePage(Gtk.Box):
         return result
 
     def _on_search_changed(self, _entry):
+        self._apply_filters()
+
+    def _on_author_changed(self, _entry):
         self._apply_filters()
 
     def _on_filter_toggled(self, btn):
@@ -854,14 +909,62 @@ class DevicePage(Gtk.Box):
             except Exception:
                 best_hour = "–"
 
-            # Global speed
+            # Global speed and total
             cur.execute("SELECT SUM(total_read_time), SUM(total_read_pages) FROM book")
             speed_row = cur.fetchone()
-            if speed_row and speed_row[0] and speed_row[1] and speed_row[0] > 0:
-                ppm = speed_row[1] / (speed_row[0] / 60.0)
+            total_secs = speed_row[0] or 0 if speed_row else 0
+            total_pages_all = speed_row[1] or 0 if speed_row else 0
+            if total_secs > 0 and total_pages_all > 0:
+                ppm = total_pages_all / (total_secs / 60.0)
                 speed_str = _("{n} p/h").format(n=int(ppm * 60))
             else:
                 speed_str = "–"
+
+            total_h = int(total_secs / 3600)
+            total_str = ngettext("{n} hour", "{n} hours", total_h).format(n=total_h)
+
+            # Books finished (>= 90% read)
+            cur.execute("SELECT COUNT(*) FROM book WHERE total_read_pages >= pages * 0.9 AND pages > 0")
+            finished_row = cur.fetchone()
+            finished = finished_row[0] if finished_row else 0
+
+            # This week stats
+            week_ago = int((datetime.now() - timedelta(days=7)).timestamp())
+            week_min = 0
+            week_pages = 0
+            try:
+                cur.execute(f"""
+                    SELECT SUM(duration), COUNT(*) FROM {ps_table}
+                    WHERE start_time >= ?
+                """, (week_ago,))
+                wr = cur.fetchone()
+                if wr and wr[0]:
+                    week_min = int(wr[0] / 60)
+                    week_pages = wr[1] or 0
+            except Exception:
+                try:
+                    cur.execute(f"""
+                        SELECT COUNT(*) FROM {ps_table}
+                        WHERE period >= ?
+                    """, (week_ago,))
+                    wr = cur.fetchone()
+                    week_pages = wr[0] if wr else 0
+                except Exception:
+                    pass
+
+            week_str = _fmt_minutes(week_min) if week_min else "–"
+
+            # Books in progress this week
+            week_books_cur = []
+            try:
+                cur.execute("""
+                    SELECT title, authors FROM book
+                    WHERE last_open >= ? AND total_read_pages < pages * 0.9 AND pages > 0
+                    ORDER BY last_open DESC LIMIT 5
+                """, (week_ago,))
+                week_books_cur = [(r[0] or "", r[1] or "") for r in cur.fetchall()]
+            except Exception:
+                pass
 
             conn.close()
             try:
@@ -869,7 +972,18 @@ class DevicePage(Gtk.Box):
             except Exception:
                 pass
 
-            GLib.idle_add(self._on_kr_loaded, books, streak, speed_str, best_hour)
+            stats = {
+                "streak": streak,
+                "speed_str": speed_str,
+                "best_hour": best_hour,
+                "total_str": total_str,
+                "finished": finished,
+                "week_str": week_str,
+                "week_min": week_min,
+                "week_pages": week_pages,
+                "week_books": week_books_cur,
+            }
+            GLib.idle_add(self._on_kr_loaded, books, stats)
 
         except Exception as exc:
             GLib.idle_add(self._on_kr_error, str(exc))
@@ -878,31 +992,88 @@ class DevicePage(Gtk.Box):
         self._kr_spinner.stop()
         self._kr_status_lbl.set_label(_("Error: {msg}").format(msg=msg))
 
-    def _on_kr_loaded(self, books: list, streak: int, speed_str: str, best_hour: str):
+    def _on_kr_loaded(self, books: list, stats: dict):
         self._kr_spinner.stop()
         self._kr_status_lbl.set_label("")
         self._kr_loaded = True
+        self._kr_stats = stats
 
+        streak = stats.get("streak", 0)
         streak_label = ngettext("{n} day", "{n} days", streak).format(n=streak)
-        for card, (heading, value) in zip(
-            [self._card_streak, self._card_speed, self._card_hour],
-            [
-                (_("Reading streak"), streak_label),
-                (_("Avg speed"), speed_str),
-                (_("Best hour"), best_hour),
-            ],
-        ):
+
+        def _set_card(card, value, heading):
             inner = card.get_first_child()
             val_lbl = inner.get_first_child()
             hdg_lbl = val_lbl.get_next_sibling()
             val_lbl.set_label(value)
             hdg_lbl.set_label(heading)
 
+        _set_card(self._card_streak, streak_label, _("Reading streak"))
+        _set_card(self._card_speed, stats.get("speed_str", "–"), _("Avg speed"))
+        _set_card(self._card_hour, stats.get("best_hour", "–"), _("Best hour"))
+
+        finished = stats.get("finished", 0)
+        _set_card(self._card_week, stats.get("week_str", "–"), _("This week"))
+        _set_card(self._card_total, stats.get("total_str", "–"), _("Total read"))
+        _set_card(self._card_finished,
+                  ngettext("{n} book", "{n} books", finished).format(n=finished),
+                  _("Books finished"))
+
         self._stats_row.set_visible(True)
+        self._stats_row2.set_visible(True)
         self._kr_heading.set_visible(True)
+        self._email_btn.set_visible(True)
 
         while self._kr_list.get_first_child():
             self._kr_list.remove(self._kr_list.get_first_child())
 
         for b in books:
             self._kr_list.append(_KrRow(b))
+
+    def _on_send_email_clicked(self, _btn):
+        stats = self._kr_stats
+        streak = stats.get("streak", 0)
+        device_name = self._device.get("name", "") if self._device else ""
+
+        lines = [
+            _("📚 Weekly Reading Summary — {device}").format(device=device_name),
+            "",
+            _("Reading streak: {v}").format(
+                v=ngettext("{n} day", "{n} days", streak).format(n=streak)),
+            _("Time read this week: {v}").format(v=stats.get("week_str", "–")),
+            _("Pages this week: {v}").format(v=stats.get("week_pages", 0)),
+            _("Average speed: {v}").format(v=stats.get("speed_str", "–")),
+            _("Best reading hour: {v}").format(v=stats.get("best_hour", "–")),
+            _("Total reading time: {v}").format(v=stats.get("total_str", "–")),
+            _("Books finished: {v}").format(
+                v=ngettext("{n} book", "{n} books",
+                           stats.get("finished", 0)).format(n=stats.get("finished", 0))),
+        ]
+
+        week_books = stats.get("week_books", [])
+        if week_books:
+            lines.append("")
+            lines.append(_("Currently reading:"))
+            for title, authors in week_books:
+                entry = f"  • {title}"
+                if authors:
+                    entry += f" — {authors}"
+                lines.append(entry)
+
+        body = "\n".join(lines)
+        subject = _("Weekly Reading Summary")
+        mailto = "mailto:?subject={s}&body={b}".format(
+            s=urllib.parse.quote(subject),
+            b=urllib.parse.quote(body),
+        )
+        try:
+            subprocess.Popen(["xdg-open", mailto])
+        except Exception as exc:
+            dlg = Gtk.MessageDialog(
+                transient_for=self.get_root(), modal=True,
+                message_type=Gtk.MessageType.ERROR,
+                buttons=Gtk.ButtonsType.OK,
+                text=str(exc),
+            )
+            dlg.connect("response", lambda d, _r: d.destroy())
+            dlg.show()
