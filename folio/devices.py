@@ -13,7 +13,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from folio.paths import CONFIG_DIR, DEVICES_CONFIG, EPUBS_DIR
+from folio.paths import CONFIG_DIR, DEVICES_CONFIG
 
 
 def load_devices() -> list[dict]:

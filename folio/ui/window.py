@@ -14,7 +14,7 @@ from gi.repository import Gtk, GLib, GdkPixbuf, Gdk, Gio
 from folio.database import (
     get_all_books, search_books, count_books,
     get_books_by_author, get_books_by_series,
-    get_profiles, create_profile, rename_profile, delete_profile,
+    get_profiles, create_profile, delete_profile,
     get_or_create_default_profile,
 )
 from folio.paths import COVERS_DIR, PREFS_FILE

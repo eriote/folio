@@ -5,13 +5,12 @@ Reading statistics page.
 import csv
 import io
 import threading
-from datetime import date
 
 import gi
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, GLib, Gdk
+from gi.repository import Gtk, GLib
 
-from folio.database import get_reading_stats, get_or_create_default_profile
+from folio.database import get_reading_stats
 from folio.paths import PREFS_FILE
 
 import json

@@ -8,7 +8,6 @@ Connection is opened once per process via get_conn().
 import sqlite3
 import unicodedata
 from datetime import datetime
-from pathlib import Path
 
 from folio.paths import DB_PATH, ensure_dirs
 

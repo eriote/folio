@@ -4,11 +4,11 @@ Settings page — Library, Devices sub-sections.
 
 import gi
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk
 
 from folio.devices import (
     load_devices, save_devices, detect_auto_paths, is_connected,
-    _wifi_ip, _wifi_folder, _sftp_ip_port, _sftp_folder,
+    _wifi_ip, _wifi_folder, _sftp_ip_port,
 )
 from folio.paths import DATA_DIR
 

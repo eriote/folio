@@ -21,7 +21,7 @@ from ebooklib import epub
 from PIL import Image
 import io
 
-from folio.database import add_book, get_conn, normalize
+from folio.database import add_book, get_conn
 from folio.paths import COVERS_DIR, EPUBS_DIR, ensure_dirs
 
 EPUB_EXTENSIONS = {".epub"}
