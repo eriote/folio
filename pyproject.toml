@@ -1,22 +1,92 @@
 [build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.backends.legacy:build"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "folio"
 version = "0.1.0"
-description = "Personal ebook library manager"
+description = "Personal ebook library manager — GTK4 + SQLite"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
+authors = [
+    { name = "eriote" },
+]
+keywords = [
+    "ebook", "epub", "library", "reading", "books",
+    "kindle", "koreader", "gtk4",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: X11 Applications :: GTK",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: English",
+    "Natural Language :: Spanish",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+    "Topic :: Other/Nonlisted Topic",
+]
 dependencies = [
     "ebooklib",
     "Pillow",
+    "PyGObject>=3.42",
 ]
+
+[project.optional-dependencies]
+sftp = ["paramiko>=3.0"]
+dev = [
+    "build",
+    "ruff",
+]
+
+[project.urls]
+Homepage      = "https://github.com/eriote/folio"
+Repository    = "https://github.com/eriote/folio"
+Issues        = "https://github.com/eriote/folio/issues"
+Documentation = "https://github.com/eriote/folio#readme"
+Changelog     = "https://github.com/eriote/folio/releases"
 
 [project.scripts]
 folio = "folio.__main__:main"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["folio*"]
+
+[tool.setuptools.package-data]
+folio = [
+    "locale/*/LC_MESSAGES/*.mo",
+    "locale/*/LC_MESSAGES/*.po",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+builtins = ["_", "ngettext"]   # gettext shortcuts, installed at runtime by folio.i18n
+
+[tool.ruff.lint]
+# Start permissive for 0.1.0; tighten in 0.2.x.
+select = ["E", "F", "W"]
+ignore = [
+    "E501",   # line too long — already covered by ruff format if we ever add it
+    "E701",   # multiple statements on one line (colon) — common in GTK builders
+    "E702",   # multiple statements on one line (semicolon) — same
+    "E741",   # ambiguous variable name
+    "E402",   # module level import not at top — gettext setup needs this
+]
+
+[tool.ruff.lint.per-file-ignores]
+"folio/i18n.py" = ["F401"]   # gettext re-exports
+
+[tool.ruff.lint.isort]
+known-first-party = ["folio"]

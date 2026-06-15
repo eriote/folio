@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.eriote.Folio</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Folio</name>
+  <summary>Manage your personal ebook library</summary>
+  <summary xml:lang="es">Gestiona tu biblioteca personal de libros electrónicos</summary>
+
+  <description>
+    <p>
+      Folio is a GTK4 desktop application for managing your collection of EPUB
+      ebooks. It keeps track of what you have, what you've read, what's waiting
+      in your queue, and how the books move between your e-reader devices.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Import an existing folder of EPUBs in one click</li>
+      <li>Browse a clean grid of covers, sorted and searchable</li>
+      <li>Track what you're reading, want to read, and have finished</li>
+      <li>Multiple user profiles, each with an independent reading log</li>
+      <li>Add books read on paper or other apps as external entries</li>
+      <li>Edit book metadata and embed covers back into the EPUB</li>
+      <li>Send books to your e-reader by cable, WiFi, or SFTP</li>
+      <li>KoReader integration: read your statistics directly from the device</li>
+      <li>Annual reading goal with progress bar and monthly chart</li>
+      <li>Discover suggestions: series continuations, more from favourite authors</li>
+      <li>Export your reading log to CSV or Markdown</li>
+    </ul>
+    <p xml:lang="es">
+      Folio es una aplicación GTK4 para gestionar tu colección de libros EPUB.
+      Lleva el registro de lo que tienes, lo que has leído, lo que tienes
+      pendiente y cómo viajan los libros entre tus lectores.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.eriote.Folio.desktop</launchable>
+
+  <url type="homepage">https://github.com/eriote/folio</url>
+  <url type="bugtracker">https://github.com/eriote/folio/issues</url>
+  <url type="vcs-browser">https://github.com/eriote/folio</url>
+
+  <developer id="io.github.eriote">
+    <name>eriote</name>
+  </developer>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The main library grid</caption>
+      <caption xml:lang="es">La cuadrícula principal de la biblioteca</caption>
+      <image>https://raw.githubusercontent.com/eriote/folio/main/screenshots/library.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Reading log with annual goal</caption>
+      <caption xml:lang="es">Registro de lecturas con meta anual</caption>
+      <image>https://raw.githubusercontent.com/eriote/folio/main/screenshots/reading.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Stats: monthly chart, KPIs and top authors</caption>
+      <caption xml:lang="es">Estadísticas: gráfico mensual, KPIs y autores favoritos</caption>
+      <image>https://raw.githubusercontent.com/eriote/folio/main/screenshots/stats.png</image>
+    </screenshot>
+  </screenshots>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#a8c4f0</color>
+    <color type="primary" scheme_preference="dark">#1d4a8a</color>
+  </branding>
+
+  <categories>
+    <category>Office</category>
+    <category>Literature</category>
+  </categories>
+
+  <keywords>
+    <keyword>ebook</keyword>
+    <keyword>epub</keyword>
+    <keyword>library</keyword>
+    <keyword>reading</keyword>
+    <keyword>books</keyword>
+    <keyword>kindle</keyword>
+    <keyword>koreader</keyword>
+  </keywords>
+
+  <provides>
+    <binary>folio</binary>
+  </provides>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-06-15">
+      <description>
+        <p>First public release.</p>
+        <ul>
+          <li>Import a folder of EPUBs and browse them in a cover grid</li>
+          <li>Reading log: tracking what you've read, are reading, or plan to read</li>
+          <li>User profiles with independent logs</li>
+          <li>Stats page with annual goal and monthly chart</li>
+          <li>Device management: send books by cable, WiFi or SFTP</li>
+          <li>KoReader stats: streak, reading speed, best hour</li>
+          <li>Discover page with personalised suggestions</li>
+          <li>English and Spanish localisation</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <recommends>
+    <display_length compare="ge">600</display_length>
+  </recommends>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <translation type="gettext">folio</translation>
+</component>

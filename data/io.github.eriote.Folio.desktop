@@ -1,0 +1,17 @@
+[Desktop Entry]
+Name=Folio
+GenericName=Ebook Library
+GenericName[es]=Biblioteca de libros electrónicos
+Comment=Manage your personal ebook collection
+Comment[es]=Gestiona tu colección personal de libros electrónicos
+Keywords=books;ebook;epub;library;reading;kindle;koreader;
+Keywords[es]=libros;ebook;epub;biblioteca;lectura;kindle;koreader;
+Exec=folio
+Icon=io.github.eriote.Folio
+Terminal=false
+Type=Application
+Categories=GTK;Office;Literature;Viewer;
+StartupNotify=true
+StartupWMClass=io.github.eriote.Folio
+MimeType=application/epub+zip;
+X-GNOME-UsesNotifications=true
